@@ -54,10 +54,29 @@ class Card(Model):
 
     id = Column(Integer, primary_key=True)
     card_id = Column(Integer, ForeignKey(CardDefinition.id), nullable=False)
-    owner_id = Column(Integer, nullable=True)
+    owner_ids = Column(Text, nullable=True)
     spawn_timestamp = Column(DateTime, nullable=False)
     claim_timestamp = Column(DateTime, nullable=True)
     message_id = Column(Integer, nullable=False)
+
+    @property
+    def owner_id_list(self):
+        if self.owner_ids is None: return []
+        else: return list(map(int, self.owner_ids.split(';')))
+
+    @owner_id_list.setter
+    def owner_id_list(self, lis):
+        if not lis: self.owner_ids = None
+        else: self.owner_ids = ';'.join(map(str, lis))
+
+    @property
+    def owner_id(self):
+        if self.owner_ids is None: return None
+        else: return int(self.owner_ids.rsplit(';', 1)[-1])
+
+    @owner_id.setter
+    def owner_id(self, id):
+        self.owner_id_list += [id]
 
     def get_embed(self, ctx:Context, preview=False, count=1):
         embed:d.Embed = self.definition.get_embed()
@@ -82,10 +101,10 @@ class Card(Model):
                "{0.message_id})".format(self)
 
 class Inventory:
-    def __init__(self, discord_id):
-        self.discord_id = discord_id
+    def __init__(self, user_id):
+        self.user_id = user_id
         self.inv = {}
-        self.cards = session.query(Card).filter_by(owner_id=discord_id).all()
+        self.cards = session.query(Card).filter(Card.owner_ids.endswith(str(user_id))).all()
         # {card_id: [card count, card definition]
         for card in self.cards:
             if card.card_id not in self.inv:
@@ -94,7 +113,7 @@ class Inventory:
                 self.inv[card.card_id][0] += 1
         self.max_page = max(int((len(self.inv)-1) // cfg.config['ELEMENTS_PER_PAGE']), 0)
 
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> Card:
         if isinstance(item, int):
             return d.utils.get(self.cards, card_id=item)
         elif isinstance(item, str):
@@ -120,14 +139,14 @@ class Inventory:
     def count(self, card_id):
         return self.inv[card_id][0]
 
-    def get_embed(self, user:d.Member, page):
+    def get_embed(self, name, page):
         elements = cfg.config['ELEMENTS_PER_PAGE']
         page = max(0, min(page, self.max_page)) # Clamp pages to between 0 and the number of allowed pages
 
         embed = d.Embed()
         embed.set_author(name=f'Cool Cids Cards')
         embed.set_footer(text=f'Page {page+1}/{self.max_page + 1}')
-        embed.title = f"{user.display_name}'s Card Collection"
+        embed.title = f"{name}'s Card Collection"
 
         definitions = sorted(
             self.inv.values(),

@@ -103,21 +103,32 @@ async def config(ctx:Context, key, value=None, cast='str'):
 
 @client.command()
 @admin_command()
-async def spawn(ctx, card_id:int=None):
+async def spawn(ctx:d.abc.Messageable, card_id:int=None):
     definition = db.spawner.get_definition(card_id)
     msg = await ctx.send(embed=definition.get_embed())
     db.spawner.create_card_instance(definition, msg.id)
 
 @client.command()
+@admin_command()
+async def give(ctx:Context, recipient:d.Member, card_id:int):
+    card = db.Inventory(ctx.author.id)[card_id]
+    if card is None:
+        await ctx.send("You don't have that card in your collection.")
+    else:
+        card.owner_id = recipient.id
+        db.session.commit()
+        await ctx.send(f"Gave {card.definition.string()} to **{recipient.display_name}**.")
+
+@client.command()
 async def claim(ctx:Context):
-    card = db.spawner.claim(ctx.author)
+    card = db.spawner.claim(ctx.author.id)
     if card is None:
         # No claimable cards
         await ctx.message.add_reaction(emoji['x'])
     elif isinstance(card, dt.timedelta):
         # Claim is on cooldown
         total = cfg.config['CLAIM_COOLDOWN'] - card.total_seconds()
-        await ctx.send("Claim cooldown: {:d}m {:d}s".format(int(total//60), int(total%60)))
+        await ctx.send("Claim cooldown: **{:d}m {:d}s**".format(int(total//60), int(total%60)))
     elif isinstance(card, db.Card):
         # Claim successful
         msg = await ctx.channel.fetch_message(card.message_id)
@@ -128,14 +139,14 @@ async def claim(ctx:Context):
 @command_channel()
 async def inventory(ctx:Context):
     inv = db.Inventory(ctx.author.id)
-    msg = await ctx.send(content=ctx.author.mention, embed=inv.get_embed(ctx.author, 0))
+    msg = await ctx.send(content=ctx.author.mention, embed=inv.get_embed(ctx.author.display_name, 0))
     if inv.max_page > 0:
         await msg.add_reaction(emoji['arrow_prev'])
         await msg.add_reaction(emoji['arrow_next'])
 
 async def inventory_page_turn(message, user, page, max_page):
     inv = db.Inventory(user.id)
-    await message.edit(content=user.mention, embed=inv.get_embed(user, page))
+    await message.edit(content=user.mention, embed=inv.get_embed(user.display_name, page))
 
 @client.command(aliases=['preview', 'view'])
 @command_channel()
