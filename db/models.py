@@ -1,6 +1,7 @@
 from typing import Iterable
 
 import discord as d
+from discord.ext.commands import Context
 from sqlalchemy import Column, Integer, DateTime, ForeignKey, Text, Enum
 from sqlalchemy.orm import relationship
 
@@ -49,11 +50,11 @@ class Card(Model):
     spawn_timestamp = Column(DateTime, nullable=False)
     message_id = Column(Integer, nullable=False)
 
-    def get_embed(self, client:d.Client):
+    def get_embed(self, ctx:Context):
         embed = self.definition.get_embed()
         if self.owner_id is not None:
             embed.title = ':white_check_mark: ' + embed.title
-            name = client.get_user(self.owner_id).display_name
+            name = ctx.guild.get_member(self.owner_id).display_name
             embed.set_footer(text=f'Claimed by {name}!')
         return embed
 

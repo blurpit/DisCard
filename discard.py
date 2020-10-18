@@ -65,7 +65,7 @@ async def claim(ctx:Context):
         await ctx.message.add_reaction('❌')
     else:
         msg = await ctx.channel.fetch_message(card.message_id)
-        await msg.edit(embed=card.get_embed(client))
+        await msg.edit(embed=card.get_embed(ctx))
         await ctx.message.add_reaction('✅')
 
 
