@@ -2,13 +2,13 @@ from enum import Enum
 
 
 class Rarity(Enum):
-    COMMON = ('Common', 0.65, 40, 0x9aa9b5)
-    RARE = ('Rare', 0.25, 15, 0xffd900)
-    EPIC = ('Epic', 0.5, 3, 0xba24ff)
-    MEMBER = ('Member', 0.5, 1, 0xff2b24)
+    MEMBER = ('Member', 0, 0.05, 1, 0xff2b24)
+    EPIC = ('Epic', 1, 0.05, 3, 0xba24ff)
+    RARE = ('Rare', 2, 0.25, 15, 0xffd900)
+    COMMON = ('Common', 3, 0.65, 40, 0x9aa9b5)
 
-    def __init__(self, text, weight, pool, color):
-        self.text, self.weight, self.pool, self.color = text, weight, pool, color
+    def __init__(self, text, order, weight, pool, color):
+        self.text, self.order, self.weight, self.pool, self.color = text, order, weight, pool, color
 
 class Expansion(Enum):
     BASE = 'Base'
@@ -17,16 +17,16 @@ class Expansion(Enum):
         self.text = text
 
 class Set(Enum):
-    MEMBERS = ('Members', 'members')
-    ICONS = ('Icons', 'icons')
-    TRICKCORD = ("Trick'cord Treat", 'trickcord')
-    RPI = ('RPI', 'rpi')
-    MEMES = ('Memes', 'memes')
-    GAMING = ('Variety Gaming', 'gaming')
-    SMASH = ('Super Smash Bros.', 'smash')
+    MEMBERS = ('Members', 0, 'members')
+    ICONS = ('Icons', 1, 'icons')
+    TRICKCORD = ("Trick'cord Treat", 2, 'trickcord')
+    RPI = ('RPI', 3, 'rpi')
+    MEMES = ('Memes', 4, 'memes')
+    GAMING = ('Variety Gaming', 5, 'gaming')
+    SMASH = ('Super Smash Bros.', 6, 'smash')
 
-    def __init__(self, text, filename):
-        self.text, self.filename = text, filename
+    def __init__(self, text, order, drive_id):
+        self.text, self.order, self.filename = text, order, drive_id
 
 # class Type(Enum):
 #     TODO: Card types
