@@ -34,7 +34,7 @@ class CardDefinition(Model):
         embed.set_footer(text=f'This card is unclaimed! Use $claim to claim it!')
         embed.add_field(name='Set', value=f'[{self.expansion.text}] {self.set.text}')
         embed.add_field(name='Rarity', value=self.rarity.text)
-        # embed.set_thumbnail()
+        embed.set_thumbnail(url=cfg.config['IMAGE_URL_BASE'].format(self.set.drive_id))
         if self.drive_id is not None:
             embed.set_image(url=cfg.config['IMAGE_URL_BASE'].format(self.drive_id))
         else:
