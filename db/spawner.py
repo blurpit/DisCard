@@ -18,6 +18,17 @@ def create_card_instance(definition, message):
     session.commit()
 
 def claim(member):
+    latest_claim = session.query(Card.claim_timestamp) \
+        .filter_by(owner_id=member.id) \
+        .filter(Card.claim_timestamp != None) \
+        .order_by(Card.claim_timestamp.desc()) \
+        .first()
+
+    if latest_claim:
+        delta = (dt.datetime.utcnow() - latest_claim[0])
+        if delta.total_seconds() < cfg.config['CLAIM_COOLDOWN']:
+            return delta
+
     card = session.query(Card) \
         .filter(Card.owner_id == None) \
         .order_by(Card.spawn_timestamp.desc()) \
@@ -25,5 +36,6 @@ def claim(member):
 
     if card is not None:
         card.owner_id = member.id
+        card.claim_timestamp = dt.datetime.utcnow()
         session.commit()
         return card

@@ -31,7 +31,7 @@ class Inventory:
         return iter(self.cards)
 
     def filter(self, **kwargs):
-        """ Filter the inventory by certain attributes. Ex: inv.filter(set='Smash Bros.', rarity='Rare') """
+        """ Filter the inventory by certain attributes. Ex: inv.filter(set=Set.SMASH, rarity=Rarity.RARE) """
         return filter(
             lambda c: all(getattr(c, attr) == kwargs[attr] for attr in kwargs),
             self.cards

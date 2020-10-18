@@ -1,3 +1,4 @@
+import datetime as dt
 import traceback
 from pydoc import locate
 
@@ -61,9 +62,15 @@ async def spawn(ctx:Context):
 @client.command()
 async def claim(ctx:Context):
     card = db.spawner.claim(ctx.author)
-    if not card:
+    if card is None:
+        # No claimable cards
         await ctx.message.add_reaction('❌')
-    else:
+    elif isinstance(card, dt.timedelta):
+        # Claim is on cooldown
+        total = cfg.config['CLAIM_COOLDOWN'] - card.total_seconds()
+        await ctx.send("Claim cooldown: {:d}m {:d}s".format(int(total//60), int(total%60)))
+    elif isinstance(card, db.Card):
+        # Claim successful
         msg = await ctx.channel.fetch_message(card.message_id)
         await msg.edit(embed=card.get_embed(ctx))
         await ctx.message.add_reaction('✅')

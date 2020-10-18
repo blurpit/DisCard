@@ -48,6 +48,7 @@ class Card(Model):
     card_id = Column(Integer, ForeignKey(CardDefinition.id), nullable=False)
     owner_id = Column(Integer, nullable=True)
     spawn_timestamp = Column(DateTime, nullable=False)
+    claim_timestamp = Column(DateTime, nullable=True)
     message_id = Column(Integer, nullable=False)
 
     def get_embed(self, ctx:Context):
