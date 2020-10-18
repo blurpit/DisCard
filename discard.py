@@ -25,11 +25,13 @@ emoji = {
 
 
 def admin_command():
+    """ Debug command, only available to admins """
     async def predicate(ctx):
         return ctx.author.id in (426246773162639361, 416127116573278208)
     return commands.check(predicate)
 
 def command_channel():
+    """ Command is only available in the specific DisCard command channel. """
     async def predicate(ctx):
         return ctx.channel.id == cfg.config['COMMAND_CHANNEL_ID']
     return commands.check(predicate)

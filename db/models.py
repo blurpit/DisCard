@@ -14,27 +14,32 @@ class CardDefinition(Model):
 
     id = Column(Integer, primary_key=True)
     name = Column(Text, nullable=False)
-    drive_id = Column(Text, nullable=False)
-    description = Column(Text, nullable=False)
-    expansion = Column(Enum(cfg.Expansion), nullable=False)
-    set = Column(Enum(cfg.Set), nullable=False)
     rarity = Column(Enum(cfg.Rarity), nullable=False)
+    set = Column(Enum(cfg.Set), nullable=False)
+    expansion = Column(Enum(cfg.Expansion), nullable=False)
+    drive_id = Column(Text, nullable=True)
+    description = Column(Text, nullable=False)
     # type = Column(Enum(cfg.CardType), nullable=False)
 
     instances:Iterable = relationship('Card', backref='definition')
 
     def get_embed(self):
         embed = d.Embed()
-        # embed.set_thumbnail()
-        embed.set_image(url=cfg.config['IMAGE_URL_BASE'].format(self.drive_id))
-        embed.set_author(name=f'Cool Cids Cards')
-        embed.set_footer(text=f'This item is unclaimed! Use $claim to claim it!')
-        embed.add_field(name='Set', value=f'[{self.expansion.text}] {self.set.text}')
-        embed.add_field(name='Rarity', value=self.rarity.text)
-        embed.description = self.description
+
         embed.title = f'[#{self.id}] {self.name}'
         embed.url = 'https://google.com'
         embed.colour = d.Color(self.rarity.color)
+        embed.description = self.description
+        embed.set_author(name=f'Cool Cids Cards')
+        embed.set_footer(text=f'This card is unclaimed! Use $claim to claim it!')
+        embed.add_field(name='Set', value=f'[{self.expansion.text}] {self.set.text}')
+        embed.add_field(name='Rarity', value=self.rarity.text)
+        # embed.set_thumbnail()
+        if self.drive_id is not None:
+            embed.set_image(url=cfg.config['IMAGE_URL_BASE'].format(self.drive_id))
+        else:
+            embed.add_field(name='(No Image)', value='Images pls max', inline=False)
+
         return embed
 
     def __repr__(self):
