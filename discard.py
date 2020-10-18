@@ -1,4 +1,6 @@
+import asyncio
 import datetime as dt
+import random
 import traceback
 from pydoc import locate
 
@@ -50,6 +52,12 @@ async def page_turn(message, func, direction):
 async def on_ready():
     print("\nLogged in as {}".format(client.user))
 
+    cmd_channel = client.get_channel(cfg.config['COMMAND_CHANNEL_ID']).name
+    activity = d.Activity(type=d.ActivityType.listening, name='$help in #'+cmd_channel)
+    await client.change_presence(activity=activity)
+
+    client.loop.create_task(card_spawn_timer())
+
 @client.event
 async def on_command_error(ctx:Context, error):
     if isinstance(error, (commands.errors.CommandNotFound, commands.errors.CheckFailure)):
@@ -60,6 +68,14 @@ async def on_command_error(ctx:Context, error):
     if hasattr(error, 'original'):
         error = error.original
     await ctx.send(f"```{type(error).__name__}: {str(error)}```")
+
+@client.event
+async def on_message(message:d.Message):
+    if not message.author.bot:
+        if not message.clean_content.startswith(client.command_prefix) \
+                and random.random() <= cfg.config['SPAWN_MESSAGE_CHANCE']:
+            await spawn(message.channel)
+        await client.process_commands(message)
 
 @client.event
 async def on_reaction_add(reaction:d.Reaction, user:d.Member):
@@ -87,10 +103,10 @@ async def config(ctx:Context, key, value=None, cast='str'):
 
 @client.command()
 @admin_command()
-async def spawn(ctx:Context):
-    definition = db.spawner.random_definition()
+async def spawn(ctx, card_id:int=None):
+    definition = db.spawner.get_definition(card_id)
     msg = await ctx.send(embed=definition.get_embed())
-    db.spawner.create_card_instance(definition, msg)
+    db.spawner.create_card_instance(definition, msg.id)
 
 @client.command()
 async def claim(ctx:Context):
@@ -120,6 +136,27 @@ async def inventory(ctx:Context):
 async def inventory_page_turn(message, user, page, max_page):
     inv = db.Inventory(user.id)
     await message.edit(content=user.mention, embed=inv.get_embed(user, page))
+
+
+async def card_spawn_timer():
+    await client.wait_until_ready()
+    while not client.is_closed():
+        delay = cfg.config['SPAWN_INTERVAL']
+
+        now = dt.datetime.utcnow()
+        time = now + dt.timedelta(seconds=delay)
+        start, end = cfg.config['SPAWN_INTERVAL_START_TIME'], cfg.config['SPAWN_INTERVAL_END_TIME']
+        if not start < time.hour < end:
+            if time.hour < start:
+                time = now.replace(hour=start, minute=0, second=0, microsecond=0)
+            else:
+                time = (now + dt.timedelta(hours=24)).replace(hour=start, minute=0, second=0, microsecond=0)
+            delay = (time - now).total_seconds()
+
+        await asyncio.sleep(delay)
+
+        channel = client.get_channel(cfg.config['SPAWN_INTERVAL_CHANNEL_ID'])
+        await spawn(channel)
 
 
 if __name__ == '__main__':

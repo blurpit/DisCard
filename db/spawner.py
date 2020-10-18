@@ -4,16 +4,19 @@ import random
 from . import *
 
 
-def random_definition():
-    row = random.randrange(0, session.query(CardDefinition).count())
-    return session.query(CardDefinition)[row]
+def get_definition(card_id=None):
+    if card_id is None:
+        row = random.randrange(0, session.query(CardDefinition).count())
+        return session.query(CardDefinition)[row]
+    else:
+        return session.query(CardDefinition).filter_by(id=card_id).one_or_none()
 
-def create_card_instance(definition, message):
+def create_card_instance(definition, message_id):
     session.add(Card(
         card_id=definition.id,
         owner_id=None,
         spawn_timestamp=dt.datetime.utcnow(),
-        message_id=message.id
+        message_id=message_id
     ))
     session.commit()
 
