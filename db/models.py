@@ -59,12 +59,22 @@ class Card(Model):
     claim_timestamp = Column(DateTime, nullable=True)
     message_id = Column(Integer, nullable=False)
 
-    def get_embed(self, ctx:Context):
-        embed = self.definition.get_embed()
+    def get_embed(self, ctx:Context, preview=False, count=1):
+        embed:d.Embed = self.definition.get_embed()
+
         if self.owner_id is not None:
-            embed.title = ':white_check_mark: ' + embed.title
+            if preview: embed.title = '[Preview] ' + embed.title
+            else: embed.title = ':white_check_mark: ' + embed.title
+
             name = ctx.guild.get_member(self.owner_id).display_name
-            embed.set_footer(text=f'Claimed by {name}!')
+
+            if preview:
+                if count == 1: text = f'You own 1 copy of this card.'
+                else: text = f'You own {count} copies of this card.'
+            else:
+                text=f'Claimed by {name}!'
+            embed.set_footer(text=text)
+
         return embed
 
     def __repr__(self):
@@ -86,7 +96,7 @@ class Inventory:
 
     def __getitem__(self, item):
         if isinstance(item, int):
-            return d.utils.get(self.cards, id=item)
+            return d.utils.get(self.cards, card_id=item)
         elif isinstance(item, str):
             return d.utils.get(self.cards, name=item)
 
@@ -98,7 +108,7 @@ class Inventory:
         return len(self.cards)
 
     def __contains__(self, card_id):
-        return
+        return card_id in self.inv
 
     def filter(self, **kwargs):
         """ Filter the inventory by certain attributes. Ex: inv.filter(set=Set.SMASH, rarity=Rarity.RARE) """
@@ -106,6 +116,9 @@ class Inventory:
             lambda c: all(getattr(c, attr) == kwargs[attr] for attr in kwargs),
             self.cards
         )
+
+    def count(self, card_id):
+        return self.inv[card_id][0]
 
     def get_embed(self, user:d.Member, page):
         elements = cfg.config['ELEMENTS_PER_PAGE']

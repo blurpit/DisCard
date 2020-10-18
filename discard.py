@@ -137,6 +137,18 @@ async def inventory_page_turn(message, user, page, max_page):
     inv = db.Inventory(user.id)
     await message.edit(content=user.mention, embed=inv.get_embed(user, page))
 
+@client.command(aliases=['preview', 'view'])
+@command_channel()
+async def show(ctx:Context, card_id:int):
+    inv = db.Inventory(ctx.author.id)
+    if card_id in inv:
+        await ctx.send(embed=inv[card_id].get_embed(
+            ctx, preview=True,
+            count=inv.count(card_id))
+        )
+    else:
+        await ctx.send("You don't have that card in your collection.")
+
 
 async def card_spawn_timer():
     await client.wait_until_ready()
