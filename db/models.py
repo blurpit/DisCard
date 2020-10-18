@@ -82,7 +82,7 @@ class Inventory:
                 self.inv[card.card_id] = [1, card.definition]
             else:
                 self.inv[card.card_id][0] += 1
-        self.max_page = int(len(self.inv) // cfg.config['ELEMENTS_PER_PAGE'])
+        self.max_page = max(int((len(self.inv)-1) // cfg.config['ELEMENTS_PER_PAGE']), 0)
 
     def __getitem__(self, item):
         if isinstance(item, int):
