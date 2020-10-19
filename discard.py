@@ -2,6 +2,7 @@ import asyncio
 import datetime as dt
 import random
 import traceback
+from operator import attrgetter
 from pydoc import locate
 
 import discord as d
@@ -42,7 +43,7 @@ def admin_command():
 def command_channel():
     """ Command is only available in the specific DisCard command channel. """
     async def predicate(ctx):
-        return isinstance(ctx.channel, d.DMChannel) or ctx.channel.id == cfg.config['COMMAND_CHANNEL_ID']
+        return isinstance(ctx.channel, d.DMChannel) or ctx.channel.id in cfg.config['COMMAND_CHANNELS']
     return commands.check(predicate)
 
 def no_private_messages():
@@ -77,8 +78,7 @@ async def add_page_reactions(message, max_page):
 async def on_ready():
     print("\nLogged in as {}".format(client.user))
 
-    cmd_channel = client.get_channel(cfg.config['COMMAND_CHANNEL_ID']).name
-    activity = d.Activity(type=d.ActivityType.listening, name='$help in #'+cmd_channel)
+    activity = d.Activity(type=d.ActivityType.listening, name='the sweet sound of a shuffling deck')
     await client.change_presence(activity=activity)
 
     client.loop.create_task(card_spawn_timer())
@@ -134,6 +134,26 @@ async def config(ctx:Context, key, value=None, cast='str'):
     else:
         value, typ = cfg.set_config(key, value, locate(cast))
         await ctx.send(f"Set {key} = {value} {typ}")
+
+@client.command()
+@admin_command()
+async def enable(ctx:Context, channel:d.TextChannel, option:str):
+    if option == 'commands':
+        cfg.config['COMMAND_CHANNELS'].add(channel.id)
+        await ctx.send(f'Enabled {channel.mention} for commands.')
+    elif option == 'spawning':
+        cfg.config['SPAWN_EXCLUDE_CHANNELS'].discard(channel.id)
+        await ctx.send(f'Enabled {channel.mention} for card spawning.')
+
+@client.command()
+@admin_command()
+async def disable(ctx:Context, channel:d.TextChannel, option:str):
+    if option == 'commands':
+        cfg.config['COMMAND_CHANNELS'].discard(channel.id)
+        await ctx.send(f'Disabled {channel.mention} for commands.')
+    elif option == 'spawning':
+        cfg.config['SPAWN_EXCLUDE_CHANNELS'].add(channel.id)
+        await ctx.send(f'Disabled {channel.mention} for card spawning.')
 
 @client.command()
 @admin_command()
@@ -238,8 +258,13 @@ async def card_spawn_timer():
 
         await asyncio.sleep(delay)
 
-        channel = client.get_channel(cfg.config['SPAWN_INTERVAL_CHANNEL_ID'])
-        await spawn(channel)
+        channels = set(map(
+            attrgetter('id'), # Map channel to channel ID
+            filter(lambda c: isinstance(c, d.TextChannel), client.get_all_channels()) # Filter for only TextChannels
+        ))
+        await spawn(client.get_channel(
+            random.choice(list(channels - cfg.config['SPAWN_EXCLUDE_CHANNELS']))
+        ))
 
 
 if __name__ == '__main__':
