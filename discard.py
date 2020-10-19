@@ -121,6 +121,19 @@ async def on_reaction_add(reaction:d.Reaction, user:d.Member):
 
 
 @client.command()
+async def help(ctx:Context):
+    embed = d.Embed()
+    embed.set_author(name=cfg.config['EMBED_AUTHOR'])
+    embed.title = 'Welcome to CCCards!'
+    embed.url = cfg.config['HELP_URL']
+    embed.set_thumbnail(url='https://cdn.discordapp.com/avatars/767097388212813854/066d29ec0189ce94f3271984f500bc84.png?size=256')
+    embed.description = "Hey there! Welcome to the CCCards casino, friend. I'm your trusty card dealer, DisCard. " \
+                        f"If you need some help, be sure to read our handbook here:\n{cfg.config['HELP_URL']}\n\n" \
+                        "See ya in the leaderboards!"
+    embed.colour = d.Color.dark_red()
+    await ctx.send(embed=embed)
+
+@client.command()
 @admin_command()
 async def ping(ctx:Context):
     await ctx.send('Pong!')
