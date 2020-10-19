@@ -34,6 +34,8 @@ page_controls = {
 }
 
 
+# --- Command Checks --- #
+
 def admin_command():
     """ Debug command, only available to admins """
     async def predicate(ctx):
@@ -52,6 +54,8 @@ def no_private_messages():
         return not isinstance(ctx.channel, d.DMChannel)
     return commands.check(predicate)
 
+
+# --- Utility Functions --- #
 
 async def page_turn(message, reaction, func):
     user = message.mentions[0]
@@ -73,6 +77,8 @@ async def add_page_reactions(message, max_page):
         await message.add_reaction(page_controls['next'])
         if max_page > 5: await message.add_reaction(page_controls['last'])
 
+
+# --- Client Events --- #
 
 @client.event
 async def on_ready():
@@ -120,6 +126,8 @@ async def on_reaction_add(reaction:d.Reaction, user:d.Member):
             await reaction.remove(user)
 
 
+# --- Help --- #
+
 @client.command()
 async def help(ctx:Context):
     embed = d.Embed()
@@ -132,6 +140,9 @@ async def help(ctx:Context):
                         "See ya in the leaderboards!"
     embed.colour = d.Color.dark_red()
     await ctx.send(embed=embed)
+
+
+# --- Administrator Commands --- #
 
 @client.command()
 @admin_command()
@@ -190,6 +201,9 @@ async def give(ctx:Context, recipient:d.Member, card_id:int):
         db.session.commit()
         await ctx.send(f"Gave {card.definition.string()} to **{recipient.display_name}**.")
 
+
+# --- Card Claiming --- #
+
 @client.command()
 @no_private_messages()
 async def claim(ctx:Context):
@@ -211,6 +225,9 @@ async def claim(ctx:Context):
         else:
             await msg.edit(embed=card.get_embed(ctx))
             await ctx.message.add_reaction(emoji['check'])
+
+
+# --- Inventory, Dex, Leaderboard --- #
 
 @client.command(aliases=['inv'])
 @command_channel()
@@ -264,6 +281,8 @@ async def leaderboard_toggle(message):
     await message.edit(embed=lb.get_embed(message.guild.get_member, 0))
 
 
+# --- Event Schedulers --- #
+
 async def card_spawn_timer():
     await client.wait_until_ready()
     while not client.is_closed():
@@ -289,6 +308,8 @@ async def card_spawn_timer():
             random.choice(list(channels - cfg.config['SPAWN_EXCLUDE_CHANNELS']))
         ))
 
+
+# --- Main --- #
 
 if __name__ == '__main__':
     with open('client_secret.txt', 'r') as secret:
