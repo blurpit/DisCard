@@ -38,7 +38,6 @@ class CardDefinition(Model):
         embed.add_field(name='Rarity', value=self.rarity.text)
         embed.set_thumbnail(url=cfg.config['IMAGE_URL_BASE'].format(self.set.image_id, self.set.name))
         if self.image_id is not None:
-            print(cfg.config['IMAGE_URL_BASE'].format(self.image_id, self.id))
             embed.set_image(url=cfg.config['IMAGE_URL_BASE'].format(self.image_id, self.id))
         else:
             embed.add_field(name='(No Image)', value='Images pls max', inline=False)
