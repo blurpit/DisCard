@@ -39,6 +39,11 @@ def create_card_instance(definition, message_id, channel_id):
     ))
     session.commit()
 
+def delete_card_instance(card):
+    if isinstance(card, Card): session.delete(card)
+    else: session.query(Card).filter_by(id=card).delete()
+    session.commit()
+
 def claim(user_id, channel_id):
     card = session.query(Card) \
         .filter_by(channel_id=channel_id) \

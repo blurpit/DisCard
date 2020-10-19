@@ -200,9 +200,14 @@ async def claim(ctx:Context):
         await ctx.send("Claim cooldown: **{:d}m {:d}s**".format(int(total//60), int(total%60)))
     elif isinstance(card, db.Card):
         # Claim successful
-        msg = await ctx.channel.fetch_message(card.message_id)
-        await msg.edit(embed=card.get_embed(ctx))
-        await ctx.message.add_reaction(emoji['check'])
+        try:
+            msg = await ctx.channel.fetch_message(card.message_id)
+        except d.NotFound:
+            db.spawner.delete_card_instance(card)
+            await claim(ctx) # Claim the next available card
+        else:
+            await msg.edit(embed=card.get_embed(ctx))
+            await ctx.message.add_reaction(emoji['check'])
 
 @client.command(aliases=['inv'])
 @command_channel()
