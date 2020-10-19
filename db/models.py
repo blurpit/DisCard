@@ -178,11 +178,26 @@ class CardDex:
     def __init__(self, user_id):
         self.user_id = user_id
         self.length = session.query(CardDefinition.id).count()
-        self.cards = session.query(CardDefinition) \
+        self.definitions = session.query(CardDefinition) \
             .join(Card) \
             .filter(Card.owner_ids.contains(str(user_id))) \
             .all()
         self.max_page = util.max_page(self.length)
+
+    def __contains__(self, card_id):
+        return d.utils.get(self.definitions, id=card_id) is not None
+
+    def __iter__(self):
+        return iter(self.definitions)
+
+    def __len__(self):
+        return self.length
+
+    def num_discovered(self):
+        return len(self.definitions)
+
+    def num_undiscovered(self):
+        return len(self) - self.num_discovered()
 
     def get_embed(self, name, page):
         page = util.clamp(0, page, self.max_page)
@@ -194,11 +209,11 @@ class CardDex:
 
         num_items = cfg.config['ITEMS_PER_PAGE']
 
-        embed.description = f'You have discovered {len(self.cards)} of {self.length} total cards.\n\n• '
+        embed.description = f'You have discovered {len(self.definitions)} of {self.length} total cards.\n\n• '
         items_start = num_items*page
         items_end = min(num_items*(page+1), self.length)
         items = [f'[#{i+1}] ???' for i in range(items_start, items_end)]
-        for definition in self.cards:
+        for definition in self.definitions:
             if items_start <= definition.id <= items_end:
                 items[definition.id % num_items - 1] = definition.string()
         embed.description += '\n• '.join(items)
