@@ -22,6 +22,7 @@ client.remove_command('help')  # Override help command
 emoji = {
     'arrow_next': u'\u25B6',
     'arrow_prev': u'\u25c0',
+    'arrows_toggle': u'\U0001f504',
     'check': u'\u2705',
     'x': u'\u274c'
 }
@@ -96,6 +97,9 @@ async def on_reaction_add(reaction:d.Reaction, user:d.Member):
                 await page_turn(reaction.message, direction, inventory_page_turn)
             elif 'CardDex' in title:
                 await page_turn(reaction.message, direction, cardex_page_turn)
+        elif reaction.emoji == emoji['arrows_toggle']:
+            if 'Leaderboard' in title:
+                await leaderboard_toggle(reaction.message)
 
         if not isinstance(reaction.message.channel, d.DMChannel): # Reactions can't be removed in DMs
             await reaction.remove(user)
@@ -188,6 +192,25 @@ async def cardex(ctx:Context):
 async def cardex_page_turn(message, user, page, max_page):
     dex = db.CardDex(user.id)
     await message.edit(content=user.mention, embed=dex.get_embed(user.display_name, page))
+
+@client.command(aliases=['lb'])
+async def leaderboard(ctx:Context):
+    lb = db.Leaderboard(db.Leaderboard.WEIGHTED)
+    msg = await ctx.send(embed=lb.get_embed(ctx.guild.get_member, 0))
+    if lb.max_page > 0:
+        await msg.add_reaction(emoji['arrow_prev'])
+        await msg.add_reaction(emoji['arrow_next'])
+    await msg.add_reaction(emoji['arrows_toggle'])
+
+async def leaderboard_page_turn(message, user, page, max_page):
+    mode = db.Leaderboard.WEIGHTED if '| Weighted' in message.embeds[0].title else db.Leaderboard.UNWEIGHTED
+    lb = db.Leaderboard(mode)
+    await message.edit(embed=lb.get_embed(message.guild.get_member, page))
+
+async def leaderboard_toggle(message):
+    mode = db.Leaderboard.UNWEIGHTED if '| Weighted' in message.embeds[0].title else db.Leaderboard.WEIGHTED
+    lb = db.Leaderboard(mode)
+    await message.edit(embed=lb.get_embed(message.guild.get_member, 0))
 
 
 async def card_spawn_timer():

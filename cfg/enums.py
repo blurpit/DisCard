@@ -2,13 +2,18 @@ from enum import Enum
 
 
 class Rarity(Enum):
-    MEMBER = ('Member', 0, 0.05, 1, 0xff2b24)
-    EPIC = ('Epic', 1, 0.05, 3, 0xba24ff)
-    RARE = ('Rare', 2, 0.25, 15, 0xffd900)
-    COMMON = ('Common', 3, 0.65, 40, 0x9aa9b5)
+    MEMBER = ('Member', 0, 0.05, 25, 1, 0xff2b24)
+    EPIC = ('Epic', 1, 0.05, 20, 3, 0xba24ff)
+    RARE = ('Rare', 2, 0.25, 5, 15, 0xffd900)
+    COMMON = ('Common', 3, 0.65, 1, 40, 0x9aa9b5)
 
-    def __init__(self, text, order, weight, pool, color):
-        self.text, self.order, self.weight, self.pool, self.color = text, order, weight, pool, color
+    def __init__(self, text, order, chance, weight, pool, color):
+        self.text = text
+        self.order = order
+        self.chance = chance
+        self.weight = weight
+        self.pool = pool
+        self.color = color
 
 class Expansion(Enum):
     BASE = 'Base'

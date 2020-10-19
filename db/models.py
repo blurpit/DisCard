@@ -1,8 +1,9 @@
+from operator import itemgetter
 from typing import Iterable
 
 import discord as d
 from discord.ext.commands import Context
-from sqlalchemy import Column, Integer, DateTime, ForeignKey, Text, Enum
+from sqlalchemy import Column, Integer, DateTime, ForeignKey, Text, Enum, and_, not_
 from sqlalchemy.orm import relationship
 
 import cfg
@@ -221,4 +222,49 @@ class CardDex:
 
         embed.url = cfg.config['HELP_URL']
         embed.colour = d.Color.green()
+        return embed
+
+class Leaderboard:
+    UNWEIGHTED = 0
+    WEIGHTED = 1
+
+    def __init__(self, mode):
+        self.mode = mode
+        cards = session.query(Card).filter(and_(
+            Card.claim_timestamp != None,
+            not_(Card.owner_ids.endswith(';NULL'))
+        )).all()
+        self.board = {}
+        for card in cards:
+            id = card.owner_id
+            if id not in self.board: self.board[id] = 0
+            if mode == self.UNWEIGHTED:
+                self.board[id] += 1
+            else:
+                self.board[id] += card.definition.rarity.weight
+        self.board = sorted(self.board.items(), key=itemgetter(1), reverse=True)
+        self.max_page = util.max_page(len(self.board))
+
+    def __len__(self):
+        return len(self.board)
+
+    def get_embed(self, get_member, page):
+        page = util.clamp(page, 0, self.max_page)
+
+        embed = d.Embed()
+        embed.set_author(name=cfg.config['EMBED_AUTHOR'])
+        embed.set_footer(text=f'Page {page + 1}/{self.max_page + 1} | React with \U0001f504 to toggle Weighted and Unweighted leaderboards.')
+        embed.title = "Leaderboard | " + ('Unweighted' if self.mode == self.UNWEIGHTED else 'Weighted')
+
+        num_items = cfg.config['ITEMS_PER_PAGE']
+
+        items_start = num_items * page
+        items_end = min(num_items * (page + 1), len(self))
+        items = []
+        for i, (user_id, score) in enumerate(self.board[items_start:items_end]):
+            items.append(f"#{i+1} - **{get_member(user_id).display_name}**: {score}")
+        embed.description = '\n'.join(items)
+
+        embed.url = cfg.config['HELP_URL']
+        embed.colour = d.Color.orange()
         return embed
