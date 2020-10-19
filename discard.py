@@ -5,6 +5,7 @@ import traceback
 from pydoc import locate
 
 import discord as d
+import pendulum
 from discord.ext import commands
 from discord.ext.commands import Bot, Context
 
@@ -166,14 +167,13 @@ async def card_spawn_timer():
     while not client.is_closed():
         delay = cfg.config['SPAWN_INTERVAL']
 
-        now = dt.datetime.utcnow()
-        time = now + dt.timedelta(seconds=delay)
+        now = pendulum.now('US/Eastern')
+        time = now.add(seconds=delay)
         start, end = cfg.config['SPAWN_INTERVAL_START_TIME'], cfg.config['SPAWN_INTERVAL_END_TIME']
         if not start < time.hour < end:
-            if time.hour < start:
-                time = now.replace(hour=start, minute=0, second=0, microsecond=0)
-            else:
-                time = (now + dt.timedelta(hours=24)).replace(hour=start, minute=0, second=0, microsecond=0)
+            time = time.set(hour=start, minute=0, second=0, microsecond=0)
+            if not time > now:
+                time = time.add(days=1)
             delay = (time - now).total_seconds()
 
         await asyncio.sleep(delay)

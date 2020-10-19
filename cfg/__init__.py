@@ -6,13 +6,15 @@ config = dict(
     COMMAND_CHANNEL_ID = 766730238193041438,
     SPAWN_INTERVAL = 10*60,
     SPAWN_INTERVAL_CHANNEL_ID = 766730238193041438,
-    SPAWN_INTERVAL_START_TIME = 6+12, # 7:00 UTC = 9:00AM EST
-    SPAWN_INTERVAL_END_TIME = 21, # 21:00 UTC = 11:00PM EST
+    SPAWN_INTERVAL_START_TIME = 9, # EST
+    SPAWN_INTERVAL_END_TIME = 12, # EST
     SPAWN_MESSAGE_CHANCE = 1/25,
-    CLAIM_COOLDOWN = 200,
+    CLAIM_COOLDOWN = 60,
     LAST_SPAWN = dt.datetime(2020, 10, 1),
     IMAGE_URL_BASE = 'https://drive.google.com/uc?export=download&id={}',
-    ELEMENTS_PER_PAGE = 10
+    HELP_URL = 'https://google.com',
+    EMBED_AUTHOR = 'Cool Cids Cards',
+    ITEMS_PER_PAGE = 15
 )
 
 def set_config(key, value, cast):
