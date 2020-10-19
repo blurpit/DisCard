@@ -12,6 +12,7 @@ from discord.ext.commands import Bot, Context
 import cfg
 import db
 import db.spawner
+import util
 
 intents = d.Intents.default()
 intents.members = True
@@ -20,11 +21,15 @@ client.remove_command('help')  # Override help command
 
 
 emoji = {
-    'arrow_next': u'\u25B6',
-    'arrow_prev': u'\u25c0',
     'arrows_toggle': u'\U0001f504',
     'check': u'\u2705',
     'x': u'\u274c'
+}
+page_controls = {
+    'next': u'\u25B6',
+    'prev': u'\u25c0',
+    'first': u'\u23eA',
+    'last': u'\u23e9',
 }
 
 
@@ -47,14 +52,25 @@ def no_private_messages():
     return commands.check(predicate)
 
 
-async def page_turn(message, direction, func):
+async def page_turn(message, reaction, func):
     user = message.mentions[0]
     page, max_page = map(lambda n: int(n)-1, message.embeds[0].footer.text[5:].split('/'))  # cut off "Page " and split the slash
 
-    if (page == max_page and direction > 0) or (page == 0 and direction < 0):
-        return
+    print(reaction)
+    if reaction == page_controls['next']: page = util.clamp(page+1, 0, max_page)
+    elif reaction == page_controls['prev']: page = util.clamp(page-1, 0, max_page)
+    elif reaction == page_controls['first']: page = 0
+    elif reaction == page_controls['last']: page = max_page
+    else: return
 
-    await func(message, user, page+direction, max_page)
+    await func(message, user, page, max_page)
+
+async def add_page_reactions(message, max_page):
+    if max_page > 0:
+        if max_page > 5: await message.add_reaction(page_controls['first'])
+        await message.add_reaction(page_controls['prev'])
+        await message.add_reaction(page_controls['next'])
+        if max_page > 5: await message.add_reaction(page_controls['last'])
 
 
 @client.event
@@ -90,13 +106,12 @@ async def on_message(message:d.Message):
 async def on_reaction_add(reaction:d.Reaction, user:d.Member):
     if not user.bot and reaction.message.author == client.user:
 
-        direction = 1 if reaction.emoji == emoji['arrow_next'] else -1 if reaction.emoji == emoji['arrow_prev'] else 0
         title = reaction.message.embeds[0].title
-        if direction != 0:
+        if reaction.emoji in page_controls.values():
             if 'Card Collection' in title:
-                await page_turn(reaction.message, direction, inventory_page_turn)
+                await page_turn(reaction.message, reaction.emoji, inventory_page_turn)
             elif 'CardDex' in title:
-                await page_turn(reaction.message, direction, cardex_page_turn)
+                await page_turn(reaction.message, reaction.emoji, cardex_page_turn)
         elif reaction.emoji == emoji['arrows_toggle']:
             if 'Leaderboard' in title:
                 await leaderboard_toggle(reaction.message)
@@ -160,9 +175,7 @@ async def claim(ctx:Context):
 async def inventory(ctx:Context):
     inv = db.Inventory(ctx.author.id)
     msg = await ctx.send(content=ctx.author.mention, embed=inv.get_embed(ctx.author.display_name, 0))
-    if inv.max_page > 0:
-        await msg.add_reaction(emoji['arrow_prev'])
-        await msg.add_reaction(emoji['arrow_next'])
+    await add_page_reactions(msg, inv.max_page)
 
 async def inventory_page_turn(message, user, page, max_page):
     inv = db.Inventory(user.id)
@@ -185,9 +198,7 @@ async def show(ctx:Context, card_id:int):
 async def cardex(ctx:Context):
     dex = db.CardDex(ctx.author.id)
     msg = await ctx.send(content=ctx.author.mention, embed=dex.get_embed(ctx.author.display_name, 0))
-    if dex.max_page > 0:
-        await msg.add_reaction(emoji['arrow_prev'])
-        await msg.add_reaction(emoji['arrow_next'])
+    await add_page_reactions(msg, dex.max_page)
 
 async def cardex_page_turn(message, user, page, max_page):
     dex = db.CardDex(user.id)
@@ -197,9 +208,7 @@ async def cardex_page_turn(message, user, page, max_page):
 async def leaderboard(ctx:Context):
     lb = db.Leaderboard(db.Leaderboard.WEIGHTED)
     msg = await ctx.send(embed=lb.get_embed(ctx.guild.get_member, 0))
-    if lb.max_page > 0:
-        await msg.add_reaction(emoji['arrow_prev'])
-        await msg.add_reaction(emoji['arrow_next'])
+    await add_page_reactions(msg, lb.max_page)
     await msg.add_reaction(emoji['arrows_toggle'])
 
 async def leaderboard_page_turn(message, user, page, max_page):
