@@ -6,6 +6,7 @@ from sqlalchemy import Column, Integer, DateTime, ForeignKey, Text, Enum
 from sqlalchemy.orm import relationship
 
 import cfg
+import util
 from . import Model, session
 
 
@@ -27,10 +28,10 @@ class CardDefinition(Model):
         embed = d.Embed()
 
         embed.title = f'[#{self.id}] {self.name}'
-        embed.url = 'https://google.com'
+        embed.url = cfg.config['HELP_URL']
         embed.colour = d.Color(self.rarity.color)
         embed.description = self.description
-        embed.set_author(name=f'Cool Cids Cards')
+        embed.set_author(name=cfg.config['EMBED_AUTHOR'])
         embed.set_footer(text=f'This card is unclaimed! Use $claim to claim it!')
         embed.add_field(name='Set', value=f'[{self.expansion.text}] {self.set.text}')
         embed.add_field(name='Rarity', value=self.rarity.text)
@@ -46,8 +47,14 @@ class CardDefinition(Model):
         return "CardDefinition({0.id}, {0.name}, {0.drive_id}, {0.description}, " \
                "{0.expansion}, {0.set}, {0.rarity})".format(self)
 
-    def string(self, count=1):
-        return "[#{0.id}] **{0.name}**: _{0.set.text}_ ({0.rarity.text}) x {1}".format(self, count)
+    def string(self, id=True, name=True, set=True, rarity=True, count=None):
+        result = []
+        if id: result.append(f"[#{self.id}]")
+        if name: result.append(f"**{self.name}**")
+        if set: result.append(f"*{self.set.text}*")
+        if rarity: result.append(f"({self.rarity.text})")
+        if count not in (1, None): result.append(f"x {count}")
+        return ' '.join(result)
 
 class Card(Model):
     __tablename__ = 'cards'
@@ -111,7 +118,7 @@ class Inventory:
                 self.inv[card.card_id] = [1, card.definition]
             else:
                 self.inv[card.card_id][0] += 1
-        self.max_page = max(int((len(self.inv)-1) // cfg.config['ELEMENTS_PER_PAGE']), 0)
+        self.max_page = util.max_page(len(self.inv))
 
     def __getitem__(self, item) -> Card:
         if isinstance(item, int):
@@ -140,11 +147,10 @@ class Inventory:
         return self.inv[card_id][0]
 
     def get_embed(self, name, page):
-        elements = cfg.config['ELEMENTS_PER_PAGE']
-        page = max(0, min(page, self.max_page)) # Clamp pages to between 0 and the number of allowed pages
+        page = util.clamp(page, 0, self.max_page)
 
         embed = d.Embed()
-        embed.set_author(name=f'Cool Cids Cards')
+        embed.set_author(name=cfg.config['EMBED_AUTHOR'])
         embed.set_footer(text=f'Page {page+1}/{self.max_page + 1}')
         embed.title = f"{name}'s Card Collection"
 
@@ -152,12 +158,51 @@ class Inventory:
             self.inv.values(),
             key=lambda val: (val[1].set.order, val[1].rarity.order, val[1].id)
         )
-        embed.description = f'You own {len(self)} cards!\n\n• '
-        embed.description += '\n• '.join(
-            definition.string(count)
-            for count, definition in definitions[elements*page:elements*(page+1)]
-        )
 
-        embed.url = 'https://google.com'
+        num_items = cfg.config['ITEMS_PER_PAGE']
+        items = definitions[num_items*page:num_items*(page+1)]
+
+        embed.description = f'You own {len(self)} cards! ({len(self.inv)} unique)\n'
+        embed.description += '\n**' + items[0][1].set.text + ' Set**'
+        for i in range(len(items)):
+            count, definition = items[i]
+            embed.description += '\n• ' + items[i][1].string(set=False, count=count)
+            if i+1 < len(items) and definition.set != items[i+1][1].set:
+                embed.description += '\n\n**' + items[i+1][1].set.text + ' Set**'
+
+        embed.url = cfg.config['HELP_URL']
         embed.colour = d.Color.blue()
+        return embed
+
+class CardDex:
+    def __init__(self, user_id):
+        self.user_id = user_id
+        self.length = session.query(CardDefinition.id).count()
+        self.cards = session.query(CardDefinition) \
+            .join(Card) \
+            .filter(Card.owner_ids.contains(str(user_id))) \
+            .all()
+        self.max_page = util.max_page(self.length)
+
+    def get_embed(self, name, page):
+        page = util.clamp(0, page, self.max_page)
+
+        embed = d.Embed()
+        embed.set_author(name=cfg.config['EMBED_AUTHOR'])
+        embed.set_footer(text=f'Page {page + 1}/{self.max_page + 1}')
+        embed.title = f"{name}'s CardDex"
+
+        num_items = cfg.config['ITEMS_PER_PAGE']
+
+        embed.description = f'You have discovered {len(self.cards)} of {self.length} total cards.\n\n• '
+        items_start = num_items*page
+        items_end = min(num_items*(page+1), self.length)
+        items = [f'[#{i+1}] ???' for i in range(items_start, items_end)]
+        for definition in self.cards:
+            if items_start <= definition.id <= items_end:
+                items[definition.id % num_items - 1] = definition.string()
+        embed.description += '\n• '.join(items)
+
+        embed.url = cfg.config['HELP_URL']
+        embed.colour = d.Color.green()
         return embed

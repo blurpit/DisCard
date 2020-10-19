@@ -39,7 +39,7 @@ def command_channel():
         return ctx.channel.id == cfg.config['COMMAND_CHANNEL_ID']
     return commands.check(predicate)
 
-async def page_turn(message, func, direction):
+async def page_turn(message, direction, func):
     user = message.mentions[0]
     page, max_page = map(lambda n: int(n)-1, message.embeds[0].footer.text[5:].split('/'))  # cut off "Page " and split the slash
 
@@ -83,8 +83,11 @@ async def on_reaction_add(reaction:d.Reaction, user:d.Member):
     if not user.bot and reaction.message.author == client.user:
         if reaction.emoji in (emoji['arrow_prev'], emoji['arrow_next']):
             direction = 1 if reaction.emoji == emoji['arrow_next'] else -1
-            if reaction.message.embeds[0].title.endswith('Card Collection'):
-                await page_turn(reaction.message, inventory_page_turn, direction)
+            title = reaction.message.embeds[0].title
+            if title.endswith('Card Collection'):
+                await page_turn(reaction.message, direction, inventory_page_turn)
+            elif title.endswith('CardDex'):
+                await page_turn(reaction.message, direction, cardex_page_turn)
             await reaction.remove(user)
 
 
@@ -160,6 +163,19 @@ async def show(ctx:Context, card_id:int):
         )
     else:
         await ctx.send("You don't have that card in your collection.")
+
+@client.command(aliases=['deck', 'cardeck', 'carddeck', 'dex', 'carddex'])
+@command_channel()
+async def cardex(ctx:Context):
+    dex = db.CardDex(ctx.author.id)
+    msg = await ctx.send(content=ctx.author.mention, embed=dex.get_embed(ctx.author.display_name, 0))
+    if dex.max_page > 0:
+        await msg.add_reaction(emoji['arrow_prev'])
+        await msg.add_reaction(emoji['arrow_next'])
+
+async def cardex_page_turn(message, user, page, max_page):
+    dex = db.CardDex(user.id)
+    await message.edit(content=user.mention, embed=dex.get_embed(user.display_name, page))
 
 
 async def card_spawn_timer():
