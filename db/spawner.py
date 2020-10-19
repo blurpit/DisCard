@@ -1,13 +1,31 @@
 import datetime as dt
 import random
 
+from sqlalchemy import func
+
 from . import *
 
 
 def get_definition(card_id=None):
     if card_id is None:
-        row = random.randrange(0, session.query(CardDefinition).count())
-        return session.query(CardDefinition)[row]
+        # Mapping from Rarity to the total pool amount for that rarity
+        pools = session.query(CardDefinition.rarity, func.count(CardDefinition.id)) \
+            .group_by(CardDefinition.rarity) \
+            .all()
+        pools = {rarity: count*rarity.pool for rarity, count in pools}
+
+        # Mapping from Rarity to the number of cards of that rarity that have been claimed
+        used = session.query(CardDefinition.rarity, func.count(Card.id)) \
+            .join(CardDefinition) \
+            .filter(not_(Card.owner_ids.endswith(';0'))) \
+            .group_by(CardDefinition.rarity) \
+            .all()
+        used = dict(used)
+
+        pools = {rarity: count-used[rarity] for rarity, count in pools.items() if pools[rarity] > used[rarity] }
+        if pools:
+            rarity = random.choices(list(pools.keys()), weights=[r.chance for r in pools])[0]
+            return session.query(CardDefinition).filter_by(rarity=rarity).order_by(func.random()).first()
     else:
         return session.query(CardDefinition).filter_by(id=card_id).one_or_none()
 
@@ -32,8 +50,7 @@ def claim(user_id, channel_id):
         return None
 
     latest_claim = session.query(Card.claim_timestamp) \
-        .filter(Card.owner_ids.endswith(str(user_id))) \
-        .filter(Card.claim_timestamp != None) \
+        .filter(Card.owner_ids == str(user_id)) \
         .order_by(Card.claim_timestamp.desc()) \
         .first()
 

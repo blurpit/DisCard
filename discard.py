@@ -159,8 +159,9 @@ async def disable(ctx:Context, channel:d.TextChannel, option:str):
 @admin_command()
 async def spawn(ctx:d.abc.Messageable, card_id:int=None):
     definition = db.spawner.get_definition(card_id)
-    msg = await ctx.send(embed=definition.get_embed())
-    db.spawner.create_card_instance(definition, msg.id, msg.channel.id)
+    if definition:
+        msg = await ctx.send(embed=definition.get_embed())
+        db.spawner.create_card_instance(definition, msg.id, msg.channel.id)
 
 @client.command()
 @admin_command()
@@ -245,7 +246,8 @@ async def leaderboard_toggle(message):
 async def card_spawn_timer():
     await client.wait_until_ready()
     while not client.is_closed():
-        delay = cfg.config['SPAWN_INTERVAL']
+        variation = cfg.config['SPAWN_INTERVAL_VARIATION']
+        delay = cfg.config['SPAWN_INTERVAL'] * (1 - (random.random() * variation*2 - variation))
 
         now = pendulum.now('US/Eastern')
         time = now.add(seconds=delay)
