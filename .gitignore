@@ -1,0 +1,5 @@
+logs
+.idea
+client_secret.txt
+test.py
+data/*.db
