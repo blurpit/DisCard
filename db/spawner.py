@@ -11,17 +11,19 @@ def get_definition(card_id=None):
     else:
         return session.query(CardDefinition).filter_by(id=card_id).one_or_none()
 
-def create_card_instance(definition, message_id):
+def create_card_instance(definition, message_id, channel_id):
     session.add(Card(
         card_id=definition.id,
         owner_ids=None,
         spawn_timestamp=dt.datetime.utcnow(),
-        message_id=message_id
+        message_id=message_id,
+        channel_id=channel_id
     ))
     session.commit()
 
-def claim(user_id):
+def claim(user_id, channel_id):
     card = session.query(Card) \
+        .filter_by(channel_id=channel_id) \
         .filter(Card.owner_ids == None) \
         .order_by(Card.spawn_timestamp.desc()) \
         .first()

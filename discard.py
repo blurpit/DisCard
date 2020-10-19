@@ -36,8 +36,15 @@ def admin_command():
 def command_channel():
     """ Command is only available in the specific DisCard command channel. """
     async def predicate(ctx):
-        return ctx.channel.id == cfg.config['COMMAND_CHANNEL_ID']
+        return isinstance(ctx.channel, d.DMChannel) or ctx.channel.id == cfg.config['COMMAND_CHANNEL_ID']
     return commands.check(predicate)
+
+def no_private_messages():
+    """ Command is not available in DMs """
+    async def predicate(ctx:Context):
+        return not isinstance(ctx.channel, d.DMChannel)
+    return commands.check(predicate)
+
 
 async def page_turn(message, direction, func):
     user = message.mentions[0]
@@ -81,17 +88,21 @@ async def on_message(message:d.Message):
 @client.event
 async def on_reaction_add(reaction:d.Reaction, user:d.Member):
     if not user.bot and reaction.message.author == client.user:
-        if reaction.emoji in (emoji['arrow_prev'], emoji['arrow_next']):
-            direction = 1 if reaction.emoji == emoji['arrow_next'] else -1
-            title = reaction.message.embeds[0].title
-            if title.endswith('Card Collection'):
+
+        direction = 1 if reaction.emoji == emoji['arrow_next'] else -1 if reaction.emoji == emoji['arrow_prev'] else 0
+        title = reaction.message.embeds[0].title
+        if direction != 0:
+            if 'Card Collection' in title:
                 await page_turn(reaction.message, direction, inventory_page_turn)
-            elif title.endswith('CardDex'):
+            elif 'CardDex' in title:
                 await page_turn(reaction.message, direction, cardex_page_turn)
+
+        if not isinstance(reaction.message.channel, d.DMChannel): # Reactions can't be removed in DMs
             await reaction.remove(user)
 
 
 @client.command()
+@admin_command()
 async def ping(ctx:Context):
     await ctx.send('Pong!')
 
@@ -110,7 +121,7 @@ async def config(ctx:Context, key, value=None, cast='str'):
 async def spawn(ctx:d.abc.Messageable, card_id:int=None):
     definition = db.spawner.get_definition(card_id)
     msg = await ctx.send(embed=definition.get_embed())
-    db.spawner.create_card_instance(definition, msg.id)
+    db.spawner.create_card_instance(definition, msg.id, msg.channel.id)
 
 @client.command()
 @admin_command()
@@ -124,8 +135,9 @@ async def give(ctx:Context, recipient:d.Member, card_id:int):
         await ctx.send(f"Gave {card.definition.string()} to **{recipient.display_name}**.")
 
 @client.command()
+@no_private_messages()
 async def claim(ctx:Context):
-    card = db.spawner.claim(ctx.author.id)
+    card = db.spawner.claim(ctx.author.id, ctx.channel.id)
     if card is None:
         # No claimable cards
         await ctx.message.add_reaction(emoji['x'])

@@ -65,6 +65,7 @@ class Card(Model):
     spawn_timestamp = Column(DateTime, nullable=False)
     claim_timestamp = Column(DateTime, nullable=True)
     message_id = Column(Integer, nullable=False)
+    channel_id = Column(Integer, nullable=False)
 
     @property
     def owner_id_list(self):
