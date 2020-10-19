@@ -140,13 +140,16 @@ async def ping(ctx:Context):
 
 @client.command()
 @admin_command()
-async def config(ctx:Context, key, value=None, cast='str'):
-    if value is None:
-        val = cfg.config[key]
-        await ctx.send(f"{key} = {val} {type(val)}")
+async def config(ctx:Context, key=None, value=None, cast='str'):
+    if key is None:
+        await ctx.send("Available Config Options:```\n• " + '\n• '.join(cfg.config.keys()) + '```')
     else:
-        value, typ = cfg.set_config(key, value, locate(cast))
-        await ctx.send(f"Set {key} = {value} {typ}")
+        if value is None:
+            val = cfg.config[key]
+            await ctx.send(f"{key} = {val} {type(val)}")
+        else:
+            value, typ = cfg.set_config(key, value, locate(cast))
+            await ctx.send(f"Set {key} = {value} {typ}")
 
 @client.command()
 @admin_command()
