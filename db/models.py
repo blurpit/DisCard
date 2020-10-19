@@ -19,7 +19,7 @@ class CardDefinition(Model):
     rarity = Column(Enum(cfg.Rarity), nullable=False)
     set = Column(Enum(cfg.Set), nullable=False)
     expansion = Column(Enum(cfg.Expansion), nullable=False)
-    drive_id = Column(Text, nullable=True)
+    image_id = Column(Integer, nullable=True)
     description = Column(Text, nullable=False)
     # type = Column(Enum(cfg.CardType), nullable=False)
 
@@ -36,16 +36,17 @@ class CardDefinition(Model):
         embed.set_footer(text=f'This card is unclaimed! Use $claim to claim it!')
         embed.add_field(name='Set', value=f'[{self.expansion.text}] {self.set.text}')
         embed.add_field(name='Rarity', value=self.rarity.text)
-        embed.set_thumbnail(url=cfg.config['IMAGE_URL_BASE'].format(self.set.drive_id))
-        if self.drive_id is not None:
-            embed.set_image(url=cfg.config['IMAGE_URL_BASE'].format(self.drive_id))
+        embed.set_thumbnail(url=cfg.config['IMAGE_URL_BASE'].format(self.set.image_id, self.set.name))
+        if self.image_id is not None:
+            print(cfg.config['IMAGE_URL_BASE'].format(self.image_id, self.id))
+            embed.set_image(url=cfg.config['IMAGE_URL_BASE'].format(self.image_id, self.id))
         else:
             embed.add_field(name='(No Image)', value='Images pls max', inline=False)
 
         return embed
 
     def __repr__(self):
-        return "CardDefinition({0.id}, {0.name}, {0.drive_id}, {0.description}, " \
+        return "CardDefinition({0.id}, {0.name}, {0.image_id}, {0.description}, " \
                "{0.expansion}, {0.set}, {0.rarity})".format(self)
 
     def string(self, id=True, name=True, set=True, rarity=True, count=None):

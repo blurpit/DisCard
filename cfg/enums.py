@@ -22,18 +22,18 @@ class Expansion(Enum):
         self.text = text
 
 class Set(Enum):
-    MEMBERS   = ('Members',           0, '16Qa7A73L9POopG0FZ-961tDNwgVSbvZ5')
-    ICONS     = ('Icons',             1, '1k8ScqadP1MfigPJqWknbfB73HzoQzltK')
-    TRICKCORD = ("Trick'cord Treat",  2, '1IL2Ya-0FrKh7rupBgjkE5HKD7qzBA2f_')
-    RPI       = ('RPI',               3, '1icF6hEXfHq5BYYb2jdDGq8fGhYGPqVcE')
-    MEMES     = ('Memes',             4, '19AVuAdLn7afettsuCBdQOoJOcknx8Icx')
-    GAMING    = ('Variety Gaming',    5, '1z4VJ8K6NOaQN5HMX7MJXNZw4IzAvw-mP')
-    SMASH     = ('Super Smash Bros.', 6, '1H_YmYYIB-vS5eC_Dr1Pl8otkfmGBi3_N')
+    MEMBERS   = ('Members',           0, 767845266224578640)
+    ICONS     = ('Icons',             1, 767845253847449640)
+    TRICKCORD = ("Trick'cord Treat",  2, 767845285480366080)
+    RPI       = ('RPI',               3, 767845277003415612)
+    MEMES     = ('Memes',             4, 767845271551737901)
+    GAMING    = ('Variety Gaming',    5, 767845287800078356)
+    SMASH     = ('Super Smash Bros.', 6, 767845280607109160)
 
-    def __init__(self, text, order, drive_id):
+    def __init__(self, text, order, image_id):
         self.text = text
         self.order = order
-        self.drive_id = drive_id
+        self.image_id = image_id
 
 # class Type(Enum):
 #     TODO: Card types

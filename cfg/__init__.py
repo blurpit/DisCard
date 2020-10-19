@@ -12,7 +12,7 @@ config = dict(
     SPAWN_MESSAGE_CHANCE = 1/25,
     CLAIM_COOLDOWN = 60,
     LAST_SPAWN = dt.datetime(2020, 10, 1),
-    IMAGE_URL_BASE = 'https://drive.google.com/uc?export=download&id={}',
+    IMAGE_URL_BASE = 'https://cdn.discordapp.com/attachments/767822158294286387/{}/{}.png',
     HELP_URL = 'https://docs.google.com/document/d/1wYg8EPSKm8Ndum1659isF7ho8P-bPlJHRELrXENn1fs/edit?usp=sharing',
     EMBED_AUTHOR = 'Cool Cids Cards',
     ITEMS_PER_PAGE = 15
