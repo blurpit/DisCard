@@ -54,15 +54,15 @@ def no_private_messages():
 
 async def page_turn(message, reaction, func):
     user = message.mentions[0]
-    page, max_page = map(lambda n: int(n)-1, message.embeds[0].footer.text[5:].split('/'))  # cut off "Page " and split the slash
+    current, max_page = map(lambda n: int(n)-1, message.embeds[0].footer.text[5:].split('/'))  # cut off "Page " and split the slash
 
-    print(reaction)
-    if reaction == page_controls['next']: page = util.clamp(page+1, 0, max_page)
-    elif reaction == page_controls['prev']: page = util.clamp(page-1, 0, max_page)
+    if reaction == page_controls['next']: page = util.clamp(current+1, 0, max_page)
+    elif reaction == page_controls['prev']: page = util.clamp(current-1, 0, max_page)
     elif reaction == page_controls['first']: page = 0
     elif reaction == page_controls['last']: page = max_page
-    else: return
+    else: page = current
 
+    if current == page: return
     await func(message, user, page, max_page)
 
 async def add_page_reactions(message, max_page):
