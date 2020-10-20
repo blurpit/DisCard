@@ -216,7 +216,7 @@ class CardDex:
         items_end = min(num_items*(page+1), self.length)
         items = [f'[#{i+1}] ???' for i in range(items_start, items_end)]
         for definition in self.definitions:
-            if items_start <= definition.id - 1 <= items_end:
+            if items_start <= definition.id - 1 < items_end:
                 items[(definition.id - 1) % num_items] = definition.string()
         embed.description += '\n• '.join(items)
 
