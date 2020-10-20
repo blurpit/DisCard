@@ -1,9 +1,11 @@
-from operator import itemgetter
-from typing import Iterable
+from operator import itemgetter, attrgetter
+from operator import itemgetter, attrgetter
+from typing import Iterable, List
 
 import discord as d
 from discord.ext.commands import Context
-from sqlalchemy import Column, Integer, DateTime, ForeignKey, Text, Enum, and_, not_
+from sqlalchemy import Column, Integer, DateTime, ForeignKey, Text, Enum, and_, not_, Boolean
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
 
 import cfg
@@ -109,17 +111,113 @@ class Card(Model):
         return "Card({0.id}, {0.card_id}, {0.owner_id}, {0.spawn_timestamp}, " \
                "{0.message_id})".format(self)
 
+class Transaction(Model):
+    __tablename__ = 'transactions'
+
+    id = Column(Integer, primary_key=True)
+    user_1 = Column(Integer, nullable=False)
+    user_2 = Column(Integer, nullable=False)
+    cards_1 = Column(Text, nullable=True)
+    cards_2 = Column(Text, nullable=True)
+    accepted_1 = Column(Boolean, nullable=False, default=False)
+    accepted_2 = Column(Boolean, nullable=False, default=False)
+    message_id = Column(Integer, nullable=True)
+
+    @hybrid_property
+    def complete(self):
+        return self.accepted_1 and self.accepted_2
+
+    @hybrid_property
+    def locked(self):
+        return self.accepted_1 or self.accepted_2
+
+    def is_party(self, user):
+        """ Gets whether a user ID is either user 1 or 2. """
+        return self.get_user(user) is not None
+
+    def has_accepted(self, user):
+        user = self.get_user(user)
+        return getattr(self, 'accepted_' + str(user))
+
+    def card_set(self, user):
+        user = self.get_user(user)
+        card_set = getattr(self, 'cards_' + str(user))
+        if card_set is None: return set()
+        else: return set(map(int, card_set.split(';')))
+
+    def add_cards(self, user:int, cards:List[Card]):
+        user = self.get_user(user)
+        card_set = self.card_set(user)
+        card_set |= set(map(attrgetter('id'), cards))
+        setattr(self, 'cards_' + str(user), ';'.join(map(str, card_set)))
+
+    def remove_cards(self, user:int, cards:List[Card]):
+        user = self.get_user(user)
+        card_set = self.card_set(user)
+        for card in cards:
+            card_set.discard(card.id)
+        setattr(self, 'cards_' + str(user), ';'.join(map(str, card_set)) or None)
+
+    def set_accepted(self, user:int, accepted:bool):
+        user = self.get_user(user)
+        setattr(self, 'accepted_' + str(user), accepted)
+
+    def get_user(self, user:int):
+        if user == 1 or user == 2: return user
+        elif user == self.user_1: return 1
+        elif user == self.user_2: return 2
+        else: return None
+
+    @staticmethod
+    def _get_offer_field_text(card_map):
+        if not card_map: return "No cards have been added."
+        return '\n'.join('• ' + definition.string(count=count)
+                         for count, definition in sorted(card_map.values(), key=lambda x: x[1].id))
+
+    def get_embed(self, name_1, name_2, closed=False):
+        embed = d.Embed()
+        embed.set_author(name=cfg.config['EMBED_AUTHOR'])
+        embed.title = "{}Card Trading | {} {} • {} {}".format(
+            '[Complete] ' if self.complete else '[Closed] ' if closed else '',
+            u'\u2705' if self.accepted_1 else '', name_1,
+            u'\u2705' if self.accepted_2 else '', name_2
+        )
+        if not closed and not self.complete: embed.description = "__**How to trade:**__\n" \
+            "• Offer one or more of your cards using **$trade [Card ID] [Amount]**.\n" \
+            "• Remove a card you offered with **$untrade [Card ID] [Amount]**.\n" \
+            "• When the trade looks good, accept it using **$accept**. Once a trade is accepted, no cards can be added or removed.\n" \
+            "• If you change your mind, use **$unaccept** and you'll be able to change your offer.\n" \
+            "• If the trade is a total bust, call **$cancel** to call the whole thing off.\n" \
+            "• When both parties have accepted, the trade will be complete, and you'll each receive each other's offered cards!\n" \
+            "Be sure to check your inventory while trading! **$inventory** is disabled here to reduce clutter, but you can use it in #ccc-commands, or in DMs."
+
+        embed.add_field(
+            name=f"{name_1}'s Offer",
+            value=self._get_offer_field_text(util.query_card_map(self.card_set(1)))
+        )
+        embed.add_field(
+            name=f"{name_2}'s Offer",
+            value=self._get_offer_field_text(util.query_card_map(self.card_set(2)))
+        )
+
+        if closed: embed.set_footer(text='Trade has been canceled.')
+        elif self.complete: embed.set_footer(text='Trade completed!')
+        elif self.locked: embed.set_footer(text='Trade is locked until both parties accept.')
+
+        embed.url = cfg.config['HELP_URL']
+        embed.colour = d.Color(0xff00c8)
+        return embed
+
+    def __repr__(self):
+        return "Transaction({0.id}, {0.user_1}, {0.user_2}, {0.cards_1}, {0.cards_2}, {0.accepted_1}, {0.accepted_2}, {0.timestamp} " \
+               "{0.message_id})".format(self)
+
 class Inventory:
     def __init__(self, user_id):
         self.user_id = user_id
         self.inv = {}
         self.cards = session.query(Card).filter(Card.owner_ids.endswith(str(user_id))).all()
-        # {card_id: [card count, card definition]
-        for card in self.cards:
-            if card.card_id not in self.inv:
-                self.inv[card.card_id] = [1, card.definition]
-            else:
-                self.inv[card.card_id][0] += 1
+        self.inv = util.card_count_map(self.cards)
         self.max_page = util.max_page(len(self.inv))
 
     def __getitem__(self, item) -> Card:
@@ -156,13 +254,11 @@ class Inventory:
         embed.set_footer(text=f'Page {page+1}/{self.max_page + 1}')
         embed.title = f"{name}'s Card Collection"
 
-        definitions = sorted(
+        num_items = cfg.config['ITEMS_PER_PAGE']
+        items = sorted(
             self.inv.values(),
             key=lambda val: (val[1].set.order, val[1].rarity.order, val[1].id)
-        )
-
-        num_items = cfg.config['ITEMS_PER_PAGE']
-        items = definitions[num_items*page:num_items*(page+1)]
+        )[num_items*page : num_items*(page+1)]
 
         embed.description = f'You own {len(self)} cards! ({len(self.inv)} unique)\n'
         embed.description += '\n**' + items[0][1].set.text + ' Set**'

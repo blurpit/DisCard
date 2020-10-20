@@ -4,6 +4,7 @@ import random
 import traceback
 from operator import attrgetter
 from pydoc import locate
+from typing import Union
 
 import discord as d
 import pendulum
@@ -13,6 +14,7 @@ from discord.ext.commands import Bot, Context
 import cfg
 import db
 import db.spawner
+import db.transactions
 import util
 
 intents = d.Intents.default()
@@ -46,6 +48,12 @@ def command_channel():
     """ Command is only available in the specific DisCard command channel. """
     async def predicate(ctx):
         return isinstance(ctx.channel, d.DMChannel) or ctx.channel.id in cfg.config['COMMAND_CHANNELS']
+    return commands.check(predicate)
+
+def trade_channel():
+    """ Command is only available in the dedicated trading channel """
+    async def predicate(ctx):
+        return ctx.channel.id in cfg.config['TRADE_CHANNELS']
     return commands.check(predicate)
 
 def no_private_messages():
@@ -94,10 +102,15 @@ async def on_command_error(ctx:Context, error):
     if isinstance(error, (commands.errors.CommandNotFound, commands.errors.CheckFailure)):
         return
 
-    print(f'\nMessage: "{ctx.message.content}"')
-    traceback.print_exception(type(error), error, error.__traceback__)
     if hasattr(error, 'original'):
         error = error.original
+
+    if isinstance(error, util.CleanException):
+        await ctx.send(str(error))
+        return
+
+    print(f'\nMessage: "{ctx.message.content}"')
+    traceback.print_exception(type(error), error, error.__traceback__)
     await ctx.send(f"```{type(error).__name__}: {str(error)}```")
 
 @client.event
@@ -171,6 +184,9 @@ async def enable(ctx:Context, channel:d.TextChannel, option:str):
     elif option == 'spawning':
         cfg.config['SPAWN_EXCLUDE_CHANNELS'].discard(channel.id)
         await ctx.send(f'Enabled {channel.mention} for card spawning.')
+    elif option == 'trading':
+        cfg.config['TRADE_CHANNELS'].add(channel.id)
+        await ctx.send(f'Enabled {channel.mention} for card trading.')
 
 @client.command()
 @admin_command()
@@ -181,6 +197,9 @@ async def disable(ctx:Context, channel:d.TextChannel, option:str):
     elif option == 'spawning':
         cfg.config['SPAWN_EXCLUDE_CHANNELS'].add(channel.id)
         await ctx.send(f'Disabled {channel.mention} for card spawning.')
+    elif option == 'trading':
+        cfg.config['TRADE_CHANNELS'].discard(channel.id)
+        await ctx.send(f'Disabled {channel.mention} for card trading.')
 
 @client.command()
 @admin_command()
@@ -281,6 +300,132 @@ async def leaderboard_toggle(message):
     await message.edit(embed=lb.get_embed(message.guild.get_member, 0))
 
 
+# --- Trading & Discarding --- #
+
+@client.command()
+@trade_channel()
+async def trade(ctx:Context, action:Union[d.Member, int, str, None]=None, amount:Union[int, str]=1):
+    await ctx.message.delete(delay=1)
+
+    transaction = db.transactions.get_active_transaction(ctx.author.id)
+
+    if isinstance(action, d.Member):
+        if action == ctx.author: await ctx.send("Hey, feel free to trade with yourself all you like, you don't need me for that.")
+        elif action == client.user: await ctx.send("I'd love to, but I gotta keep it fair here, and trading cards with the dealer is a bit disingenuous.")
+        elif action.bot: await ctx.send("Sorry, but bots just don't show enough appreciation for the art of the trade for me to support that. Call it principle.")
+        elif not transaction:
+            transaction = db.transactions.open_transaction(ctx.author.id, action.id)
+            await update_trade(ctx, transaction)
+        elif transaction.is_party(ctx.author.id): await ctx.send("You already have an active trade open. Please finish or cancel it before starting another one.")
+        elif transaction.is_party(action.id): await ctx.send("This person already has an active trade open. Please wait for them to finish before starting a trade.")
+        else: raise RuntimeError(f"Invalid transaction: {transaction.id}")
+
+    elif isinstance(action, int):
+        await trade_add(ctx, transaction, action, amount)
+
+    elif action == 'resend':
+        if not transaction: raise util.NoActiveTrade()
+        await resend_trade(ctx, transaction)
+
+    elif isinstance(action, str):
+        raise util.UserNotFound(action)
+
+    elif action is None:
+        if not transaction: raise util.NoActiveTrade()
+
+async def update_trade(ctx:Context, transaction:db.Transaction, closed=False):
+    name_1 = ctx.guild.get_member(transaction.user_1).display_name
+    name_2 = ctx.guild.get_member(transaction.user_2).display_name
+    if transaction.message_id:
+        msg = await ctx.channel.fetch_message(transaction.message_id)
+        await msg.edit(embed=transaction.get_embed(name_1, name_2, closed=closed))
+    else:
+        msg = await ctx.send(embed=transaction.get_embed(name_1, name_2, closed=closed))
+        db.transactions.set_transaction_message(transaction, msg.id)
+
+async def resend_trade(ctx:Context, transaction:db.Transaction):
+    transaction.message_id = None
+    await update_trade(ctx, transaction)
+
+async def trade_add(ctx:Context, transaction:db.Transaction, card_id:int, amount:Union[int, str]):
+    if not transaction: raise util.NoActiveTrade()
+    if (isinstance(amount, str) and amount != 'all') \
+    or (isinstance(amount, int) and amount < 1): return
+
+    if transaction.locked: return
+
+    added_cards = transaction.card_set(transaction.get_user(ctx.author.id))
+    cards = util.query_card_amount(ctx.author.id, card_id, amount, exclude=added_cards)
+    if cards:
+        transaction.add_cards(ctx.author.id, cards)
+        db.session.commit()
+        await update_trade(ctx, transaction)
+
+@client.command()
+@trade_channel()
+async def add(ctx:Context, card_id:int, amount:Union[int, str]=1):
+    await ctx.message.delete(delay=1)
+    transaction = db.transactions.get_active_transaction(ctx.author.id)
+    await trade_add(ctx, transaction, card_id, amount=amount)
+
+@client.command(aliases=['remove'])
+@trade_channel()
+async def untrade(ctx:Context, card_id:int, amount:Union[int, str]=1):
+    await ctx.message.delete(delay=1)
+    if (isinstance(amount, str) and amount != 'all') \
+    or (isinstance(amount, int) and amount < 1): return
+
+    transaction = db.transactions.get_active_transaction(ctx.author.id)
+    if not transaction: raise util.NoActiveTrade()
+    if transaction.locked: return
+
+    cards = util.query_cards(transaction.card_set(ctx.author.id), card_id=card_id)[:amount if amount != 'all' else None]
+    if cards:
+        transaction.remove_cards(ctx.author.id, cards)
+        db.session.commit()
+        await update_trade(ctx, transaction)
+
+@client.command()
+@trade_channel()
+async def accept(ctx:Context):
+    await ctx.message.delete(delay=1)
+
+    transaction = db.transactions.get_active_transaction(ctx.author.id)
+    if not transaction: raise util.NoActiveTrade()
+    if transaction.has_accepted(ctx.author.id): return
+
+    transaction.set_accepted(ctx.author.id, True)
+    if transaction.complete:
+        db.transactions.execute(transaction)
+    await update_trade(ctx, transaction)
+
+@client.command()
+@trade_channel()
+async def unaccept(ctx:Context):
+    await ctx.message.delete(delay=1)
+
+    transaction = db.transactions.get_active_transaction(ctx.author.id)
+    if not transaction: raise util.NoActiveTrade()
+    if not transaction.has_accepted(ctx.author.id): return
+
+    transaction.set_accepted(ctx.author.id, False)
+    await update_trade(ctx, transaction)
+
+@client.command(aliases=['close'])
+@trade_channel()
+async def cancel(ctx:Context):
+    await ctx.message.delete(delay=1)
+
+    transaction = db.transactions.close_active_transaction(ctx.author.id)
+    if transaction:
+        name_1 = ctx.guild.get_member(transaction.user_1).display_name
+        name_2 = ctx.guild.get_member(transaction.user_2).display_name
+        await update_trade(ctx, transaction, closed=True)
+        await ctx.send(f"Trade between {name_1} and {name_2} has been closed.")
+    else:
+        raise util.NoActiveTrade()
+
+
 # --- Event Schedulers --- #
 
 async def card_spawn_timer():
@@ -300,9 +445,12 @@ async def card_spawn_timer():
 
         await asyncio.sleep(delay)
 
+        def spawnable(channel):
+            return isinstance(channel, d.TextChannel) and channel.id != cfg.config['TRADE_CHANNEL']
+
         channels = set(map(
             attrgetter('id'), # Map channel to channel ID
-            filter(lambda c: isinstance(c, d.TextChannel), client.get_all_channels()) # Filter for only TextChannels
+            filter(spawnable, client.get_all_channels()) # Filter for only TextChannels
         ))
         await spawn(client.get_channel(
             random.choice(list(channels - cfg.config['SPAWN_EXCLUDE_CHANNELS']))
