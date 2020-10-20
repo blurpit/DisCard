@@ -164,21 +164,6 @@ async def ping(ctx:Context):
 
 @client.command()
 @admin_command()
-@trade_channels()
-async def maxaccept(ctx:Context):
-    await ctx.message.delete(delay=1)
-
-    transaction = db.transactions.get_active_transaction(416127116573278208)
-    if not transaction: raise util.NoActiveTrade()
-    if transaction.has_accepted(416127116573278208): return
-
-    transaction.set_accepted(416127116573278208, True)
-    if transaction.complete:
-        db.transactions.execute(transaction)
-    await update_trade(ctx, transaction)
-
-@client.command()
-@admin_command()
 async def config(ctx:Context, key=None, value=None, cast='str'):
     if key is None:
         await ctx.send("Available Config Options:```\n• " + '\n• '.join(cfg.config.keys()) + '```')
