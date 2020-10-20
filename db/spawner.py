@@ -6,8 +6,8 @@ from sqlalchemy import func
 from . import *
 
 
-def get_definition(card_id=None):
-    if card_id is None:
+def get_definition(card=None):
+    if card is None:
         # Mapping from Rarity to the total pool amount for that rarity
         pools = session.query(CardDefinition.rarity, func.count(CardDefinition.id)) \
             .group_by(CardDefinition.rarity) \
@@ -27,7 +27,10 @@ def get_definition(card_id=None):
             rarity = random.choices(list(pools.keys()), weights=[r.chance for r in pools])[0]
             return session.query(CardDefinition).filter_by(rarity=rarity).order_by(func.random()).first()
     else:
-        return session.query(CardDefinition).filter_by(id=card_id).one_or_none()
+        if isinstance(card, int):
+            return session.query(CardDefinition).filter_by(id=card).one_or_none()
+        elif isinstance(card, str):
+            return session.query(CardDefinition).filter_by(name=card).one_or_none()
 
 def create_card_instance(definition, message_id, channel_id):
     session.add(Card(

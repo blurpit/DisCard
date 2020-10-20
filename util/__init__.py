@@ -1,6 +1,6 @@
 import math
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 import db
 import cfg
@@ -24,20 +24,21 @@ def card_count_map(cards):
         count[card.card_id][0] += 1
     return count
 
-def query_card_amount(user_id, card_id, amount, exclude=()):
+def query_card_amount(user_id, card, amount, exclude=()):
     return db.session.query(db.Card) \
+        .join(db.CardDefinition) \
         .filter(db.Card.owner_ids.endswith(str(user_id))) \
-        .filter(db.Card.card_id == card_id) \
+        .filter(or_(db.Card.card_id == card, db.CardDefinition.name == card)) \
         .filter(db.Card.id.notin_(exclude)) \
         .order_by(db.Card.claim_timestamp.desc()) \
         .limit(amount if amount != 'all' else None) \
         .all()
 
-def query_cards(card_ids, **filters):
-    return db.session.query(db.Card) \
-        .filter(db.Card.id.in_(card_ids)) \
-        .filter_by(**filters) \
-        .all()
+def query_cards(card_ids, card_filter=None):
+    q = db.session.query(db.Card).filter(db.Card.id.in_(card_ids))
+    if isinstance(card_filter, int): q = q.filter_by(card_id=card_filter)
+    elif isinstance(card_filter, str): q = q.join(db.CardDefinition).filter(db.CardDefinition.name == card_filter)
+    return q.all()
 
 def query_card_map(card_ids):
     if not card_ids: return {}
@@ -53,6 +54,11 @@ class CleanException(Exception):
     """ CleanException messages will be sent as normal messages to the context """
     pass
 
+class BadArgument(CleanException):
+    def __init__(self, arg, val, message=None):
+        if not message: message = "Invalid value for **{}**: '**{}**'"
+        super().__init__(message.format(arg, val))
+
 class NoActiveTrade(CleanException):
     def __init__(self, message=None):
         if not message: message = "You don't have an active trade open. Use **$trade @Example** to start trading."
@@ -62,3 +68,8 @@ class UserNotFound(CleanException):
     def __init__(self, user, message=None):
         if not message: message = "User not found: **{}**"
         super().__init__(message.format(user))
+
+class NotInInventory(CleanException):
+    def __init__(self, card, message=None):
+        if not message: message = "You don't have **{}** in your inventory."
+        super().__init__(message.format(card))

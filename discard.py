@@ -50,7 +50,7 @@ def command_channel():
         return isinstance(ctx.channel, d.DMChannel) or ctx.channel.id in cfg.config['COMMAND_CHANNELS']
     return commands.check(predicate)
 
-def trade_channel():
+def trade_channels():
     """ Command is only available in the dedicated trading channel """
     async def predicate(ctx):
         return ctx.channel.id in cfg.config['TRADE_CHANNELS']
@@ -164,6 +164,21 @@ async def ping(ctx:Context):
 
 @client.command()
 @admin_command()
+@trade_channels()
+async def maxaccept(ctx:Context):
+    await ctx.message.delete(delay=1)
+
+    transaction = db.transactions.get_active_transaction(416127116573278208)
+    if not transaction: raise util.NoActiveTrade()
+    if transaction.has_accepted(416127116573278208): return
+
+    transaction.set_accepted(416127116573278208, True)
+    if transaction.complete:
+        db.transactions.execute(transaction)
+    await update_trade(ctx, transaction)
+
+@client.command()
+@admin_command()
 async def config(ctx:Context, key=None, value=None, cast='str'):
     if key is None:
         await ctx.send("Available Config Options:```\n• " + '\n• '.join(cfg.config.keys()) + '```')
@@ -203,8 +218,8 @@ async def disable(ctx:Context, channel:d.TextChannel, option:str):
 
 @client.command()
 @admin_command()
-async def spawn(ctx:d.abc.Messageable, card_id:int=None):
-    definition = db.spawner.get_definition(card_id)
+async def spawn(ctx:d.abc.Messageable, card:Union[int, str]=None):
+    definition = db.spawner.get_definition(card)
     if definition:
         msg = await ctx.send(embed=definition.get_embed())
         db.spawner.create_card_instance(definition, msg.id, msg.channel.id)
@@ -303,7 +318,7 @@ async def leaderboard_toggle(message):
 # --- Trading & Discarding --- #
 
 @client.command()
-@trade_channel()
+@trade_channels()
 async def trade(ctx:Context, action:Union[d.Member, int, str, None]=None, amount:Union[int, str]=1):
     await ctx.message.delete(delay=1)
 
@@ -328,7 +343,9 @@ async def trade(ctx:Context, action:Union[d.Member, int, str, None]=None, amount
         await resend_trade(ctx, transaction)
 
     elif isinstance(action, str):
-        raise util.UserNotFound(action)
+        if not await trade_add(ctx, transaction, action, amount):
+            if transaction: raise util.NotInInventory(action)
+            else: raise util.UserNotFound(action)
 
     elif action is None:
         if not transaction: raise util.NoActiveTrade()
@@ -347,46 +364,51 @@ async def resend_trade(ctx:Context, transaction:db.Transaction):
     transaction.message_id = None
     await update_trade(ctx, transaction)
 
-async def trade_add(ctx:Context, transaction:db.Transaction, card_id:int, amount:Union[int, str]):
+async def trade_add(ctx:Context, transaction:db.Transaction, card:Union[int, str], amount:Union[int, str]):
     if not transaction: raise util.NoActiveTrade()
-    if (isinstance(amount, str) and amount != 'all') \
-    or (isinstance(amount, int) and amount < 1): return
+    if isinstance(amount, str) and amount != 'all':
+        raise util.BadArgument('Amount', amount, message="Invalid value for {}: **{}**. If you're trying to add a card by name, make sure to put it in quotes.")
+    if isinstance(amount, int) and amount < 1:
+        raise util.BadArgument('Amount', amount)
 
     if transaction.locked: return
 
     added_cards = transaction.card_set(transaction.get_user(ctx.author.id))
-    cards = util.query_card_amount(ctx.author.id, card_id, amount, exclude=added_cards)
+    cards = util.query_card_amount(ctx.author.id, card, amount, exclude=added_cards)
     if cards:
         transaction.add_cards(ctx.author.id, cards)
         db.session.commit()
         await update_trade(ctx, transaction)
+        return True
 
 @client.command()
-@trade_channel()
-async def add(ctx:Context, card_id:int, amount:Union[int, str]=1):
+@trade_channels()
+async def add(ctx:Context, card:Union[int, str], amount:Union[int, str]=1):
     await ctx.message.delete(delay=1)
     transaction = db.transactions.get_active_transaction(ctx.author.id)
-    await trade_add(ctx, transaction, card_id, amount=amount)
+    await trade_add(ctx, transaction, card, amount=amount)
 
 @client.command(aliases=['remove'])
-@trade_channel()
-async def untrade(ctx:Context, card_id:int, amount:Union[int, str]=1):
+@trade_channels()
+async def untrade(ctx:Context, card:Union[int, str], amount:Union[int, str]=1):
     await ctx.message.delete(delay=1)
-    if (isinstance(amount, str) and amount != 'all') \
-    or (isinstance(amount, int) and amount < 1): return
+    if isinstance(amount, str) and amount != 'all':
+        raise util.BadArgument('Amount', amount, message="Invalid value for {}: **{}**. If you're trying to remove a card by name, make sure to put it in quotes.")
+    if isinstance(amount, int) and amount < 1:
+        raise util.BadArgument('Amount', amount)
 
     transaction = db.transactions.get_active_transaction(ctx.author.id)
     if not transaction: raise util.NoActiveTrade()
     if transaction.locked: return
 
-    cards = util.query_cards(transaction.card_set(ctx.author.id), card_id=card_id)[:amount if amount != 'all' else None]
+    cards = util.query_cards(transaction.card_set(ctx.author.id), card_filter=card)[:amount if amount != 'all' else None]
     if cards:
         transaction.remove_cards(ctx.author.id, cards)
         db.session.commit()
         await update_trade(ctx, transaction)
 
 @client.command()
-@trade_channel()
+@trade_channels()
 async def accept(ctx:Context):
     await ctx.message.delete(delay=1)
 
@@ -400,7 +422,7 @@ async def accept(ctx:Context):
     await update_trade(ctx, transaction)
 
 @client.command()
-@trade_channel()
+@trade_channels()
 async def unaccept(ctx:Context):
     await ctx.message.delete(delay=1)
 
@@ -412,7 +434,7 @@ async def unaccept(ctx:Context):
     await update_trade(ctx, transaction)
 
 @client.command(aliases=['close'])
-@trade_channel()
+@trade_channels()
 async def cancel(ctx:Context):
     await ctx.message.delete(delay=1)
 
@@ -446,7 +468,7 @@ async def card_spawn_timer():
         await asyncio.sleep(delay)
 
         def spawnable(channel):
-            return isinstance(channel, d.TextChannel) and channel.id != cfg.config['TRADE_CHANNEL']
+            return isinstance(channel, d.TextChannel) and channel.id not in cfg.config['TRADE_CHANNELS']
 
         channels = set(map(
             attrgetter('id'), # Map channel to channel ID

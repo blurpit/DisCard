@@ -185,7 +185,7 @@ class Transaction(Model):
         if not closed and not self.complete: embed.description = "__**How to trade:**__\n" \
             "• Offer one or more of your cards using **$trade [Card ID] [Amount]**.\n" \
             "• Remove a card you offered with **$untrade [Card ID] [Amount]**.\n" \
-            "• When the trade looks good, accept it using **$accept**. Once a trade is accepted, no cards can be added or removed.\n" \
+            "• When the trade looks good, accept it using **$accept**. Once a trade is accepted, cards can no longer be added or removed.\n" \
             "• If you change your mind, use **$unaccept** and you'll be able to change your offer.\n" \
             "• If the trade is a total bust, call **$cancel** to call the whole thing off.\n" \
             "• When both parties have accepted, the trade will be complete, and you'll each receive each other's offered cards!\n" \
@@ -209,7 +209,7 @@ class Transaction(Model):
         return embed
 
     def __repr__(self):
-        return "Transaction({0.id}, {0.user_1}, {0.user_2}, {0.cards_1}, {0.cards_2}, {0.accepted_1}, {0.accepted_2}, {0.timestamp} " \
+        return "Transaction({0.id}, {0.user_1}, {0.user_2}, {0.cards_1}, {0.cards_2}, {0.accepted_1}, {0.accepted_2}" \
                "{0.message_id})".format(self)
 
 class Inventory:
