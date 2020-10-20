@@ -47,19 +47,14 @@ def admin_command():
 def command_channel():
     """ Command is only available in the specific DisCard command channel. """
     async def predicate(ctx):
-        return isinstance(ctx.channel, d.DMChannel) or ctx.channel.id in cfg.config['COMMAND_CHANNELS']
+        return isinstance(ctx.channel, d.TextChannel) \
+               and ctx.channel.id in cfg.config['COMMAND_CHANNELS'][ctx.guild.id]
     return commands.check(predicate)
 
 def trade_channels():
     """ Command is only available in the dedicated trading channel """
     async def predicate(ctx):
-        return ctx.channel.id in cfg.config['TRADE_CHANNELS']
-    return commands.check(predicate)
-
-def no_private_messages():
-    """ Command is not available in DMs """
-    async def predicate(ctx:Context):
-        return not isinstance(ctx.channel, d.DMChannel)
+        return ctx.channel.id in cfg.config['TRADE_CHANNELS'][ctx.guild.id]
     return commands.check(predicate)
 
 
@@ -115,7 +110,7 @@ async def on_command_error(ctx:Context, error):
 
 @client.event
 async def on_message(message:d.Message):
-    if not message.author.bot:
+    if not message.author.bot and not isinstance(message.channel, d.DMChannel):
         if not message.clean_content.startswith(client.command_prefix) \
                 and random.random() <= cfg.config['SPAWN_MESSAGE_CHANCE']:
             await spawn(message.channel)
@@ -123,7 +118,7 @@ async def on_message(message:d.Message):
 
 @client.event
 async def on_reaction_add(reaction:d.Reaction, user:d.Member):
-    if not user.bot and reaction.message.author == client.user:
+    if not user.bot and reaction.message.author == client.user and not isinstance(reaction.message.channel, d.DMChannel):
 
         title = reaction.message.embeds[0].title
         if reaction.emoji in page_controls.values():
@@ -135,8 +130,7 @@ async def on_reaction_add(reaction:d.Reaction, user:d.Member):
             if 'Leaderboard' in title:
                 await leaderboard_toggle(reaction.message)
 
-        if not isinstance(reaction.message.channel, d.DMChannel): # Reactions can't be removed in DMs
-            await reaction.remove(user)
+        await reaction.remove(user)
 
 
 # --- Help --- #
@@ -179,26 +173,26 @@ async def config(ctx:Context, key=None, value=None, cast='str'):
 @admin_command()
 async def enable(ctx:Context, channel:d.TextChannel, option:str):
     if option == 'commands':
-        cfg.config['COMMAND_CHANNELS'].add(channel.id)
+        cfg.config['COMMAND_CHANNELS'][ctx.guild.id].add(channel.id)
         await ctx.send(f'Enabled {channel.mention} for commands.')
     elif option == 'spawning':
-        cfg.config['SPAWN_EXCLUDE_CHANNELS'].discard(channel.id)
+        cfg.config['SPAWN_EXCLUDE_CHANNELS'][ctx.guild.id].discard(channel.id)
         await ctx.send(f'Enabled {channel.mention} for card spawning.')
     elif option == 'trading':
-        cfg.config['TRADE_CHANNELS'].add(channel.id)
+        cfg.config['TRADE_CHANNELS'][ctx.guild.id].add(channel.id)
         await ctx.send(f'Enabled {channel.mention} for card trading.')
 
 @client.command()
 @admin_command()
 async def disable(ctx:Context, channel:d.TextChannel, option:str):
     if option == 'commands':
-        cfg.config['COMMAND_CHANNELS'].discard(channel.id)
+        cfg.config['COMMAND_CHANNELS'][ctx.guild.id].discard(channel.id)
         await ctx.send(f'Disabled {channel.mention} for commands.')
     elif option == 'spawning':
-        cfg.config['SPAWN_EXCLUDE_CHANNELS'].add(channel.id)
+        cfg.config['SPAWN_EXCLUDE_CHANNELS'][ctx.guild.id].add(channel.id)
         await ctx.send(f'Disabled {channel.mention} for card spawning.')
     elif option == 'trading':
-        cfg.config['TRADE_CHANNELS'].discard(channel.id)
+        cfg.config['TRADE_CHANNELS'][ctx.guild.id].discard(channel.id)
         await ctx.send(f'Disabled {channel.mention} for card trading.')
 
 @client.command()
@@ -207,12 +201,12 @@ async def spawn(ctx:d.abc.Messageable, card:Union[int, str]=None):
     definition = db.spawner.get_definition(card)
     if definition:
         msg = await ctx.send(embed=definition.get_embed())
-        db.spawner.create_card_instance(definition, msg.id, msg.channel.id)
+        db.spawner.create_card_instance(definition, msg.id, msg.channel.id, msg.guild.id)
 
 @client.command()
 @admin_command()
 async def give(ctx:Context, recipient:d.Member, card_id:int):
-    card = db.Inventory(ctx.author.id)[card_id]
+    card = db.Inventory(ctx.author.id, ctx.guild.id)[card_id]
     if card is None:
         await ctx.send("You don't have that card in your collection.")
     else:
@@ -224,7 +218,6 @@ async def give(ctx:Context, recipient:d.Member, card_id:int):
 # --- Card Claiming --- #
 
 @client.command()
-@no_private_messages()
 async def claim(ctx:Context):
     card = db.spawner.claim(ctx.author.id, ctx.channel.id)
     if card is None:
@@ -251,18 +244,18 @@ async def claim(ctx:Context):
 @client.command(aliases=['inv'])
 @command_channel()
 async def inventory(ctx:Context):
-    inv = db.Inventory(ctx.author.id)
+    inv = db.Inventory(ctx.author.id, ctx.guild.id)
     msg = await ctx.send(content=ctx.author.mention, embed=inv.get_embed(ctx.author.display_name, 0))
     await add_page_reactions(msg, inv.max_page)
 
 async def inventory_page_turn(message, user, page, max_page):
-    inv = db.Inventory(user.id)
+    inv = db.Inventory(user.id, message.guild.id)
     await message.edit(content=user.mention, embed=inv.get_embed(user.display_name, page))
 
 @client.command(aliases=['preview', 'view'])
 @command_channel()
 async def show(ctx:Context, card_id:int):
-    inv = db.Inventory(ctx.author.id)
+    inv = db.Inventory(ctx.author.id, ctx.guild.id)
     if card_id in inv:
         await ctx.send(embed=inv[card_id].get_embed(
             ctx, preview=True,
@@ -274,29 +267,29 @@ async def show(ctx:Context, card_id:int):
 @client.command(aliases=['deck', 'cardeck', 'carddeck', 'dex', 'carddex'])
 @command_channel()
 async def cardex(ctx:Context):
-    dex = db.CardDex(ctx.author.id)
+    dex = db.CardDex(ctx.author.id, ctx.guild.id)
     msg = await ctx.send(content=ctx.author.mention, embed=dex.get_embed(ctx.author.display_name, 0))
     await add_page_reactions(msg, dex.max_page)
 
 async def cardex_page_turn(message, user, page, max_page):
-    dex = db.CardDex(user.id)
+    dex = db.CardDex(user.id, message.guild.id)
     await message.edit(content=user.mention, embed=dex.get_embed(user.display_name, page))
 
 @client.command(aliases=['lb'])
 async def leaderboard(ctx:Context):
-    lb = db.Leaderboard(db.Leaderboard.WEIGHTED)
+    lb = db.Leaderboard(db.Leaderboard.WEIGHTED, ctx.guild.id)
     msg = await ctx.send(embed=lb.get_embed(ctx.guild.get_member, 0))
     await add_page_reactions(msg, lb.max_page)
     await msg.add_reaction(emoji['arrows_toggle'])
 
 async def leaderboard_page_turn(message, user, page, max_page):
     mode = db.Leaderboard.WEIGHTED if '| Weighted' in message.embeds[0].title else db.Leaderboard.UNWEIGHTED
-    lb = db.Leaderboard(mode)
+    lb = db.Leaderboard(mode, message.guild.id)
     await message.edit(embed=lb.get_embed(message.guild.get_member, page))
 
 async def leaderboard_toggle(message):
     mode = db.Leaderboard.UNWEIGHTED if '| Weighted' in message.embeds[0].title else db.Leaderboard.WEIGHTED
-    lb = db.Leaderboard(mode)
+    lb = db.Leaderboard(mode, message.guild.id)
     await message.edit(embed=lb.get_embed(message.guild.get_member, 0))
 
 
@@ -307,14 +300,14 @@ async def leaderboard_toggle(message):
 async def trade(ctx:Context, action:Union[d.Member, int, str, None]=None, amount:Union[int, str]=1):
     await ctx.message.delete(delay=1)
 
-    transaction = db.transactions.get_active_transaction(ctx.author.id)
+    transaction = db.transactions.get_active_transaction(ctx.author.id, ctx.guild.id)
 
     if isinstance(action, d.Member):
         if action == ctx.author: await ctx.send("Hey, feel free to trade with yourself all you like, you don't need me for that.")
         elif action == client.user: await ctx.send("I'd love to, but I gotta keep it fair here, and trading cards with the dealer is a bit disingenuous.")
         elif action.bot: await ctx.send("Sorry, but bots just don't show enough appreciation for the art of the trade for me to support that. Call it principle.")
         elif not transaction:
-            transaction = db.transactions.open_transaction(ctx.author.id, action.id)
+            transaction = db.transactions.open_transaction(ctx.author.id, action.id, ctx.guild.id)
             await update_trade(ctx, transaction)
         elif transaction.is_party(ctx.author.id): await ctx.send("You already have an active trade open. Please finish or cancel it before starting another one.")
         elif transaction.is_party(action.id): await ctx.send("This person already has an active trade open. Please wait for them to finish before starting a trade.")
@@ -359,7 +352,7 @@ async def trade_add(ctx:Context, transaction:db.Transaction, card:Union[int, str
     if transaction.locked: return
 
     added_cards = transaction.card_set(transaction.get_user(ctx.author.id))
-    cards = util.query_card_amount(ctx.author.id, card, amount, exclude=added_cards)
+    cards = util.query_card_amount(ctx.author.id, ctx.guild.id, card, amount, exclude=added_cards)
     if cards:
         transaction.add_cards(ctx.author.id, cards)
         db.session.commit()
@@ -370,7 +363,7 @@ async def trade_add(ctx:Context, transaction:db.Transaction, card:Union[int, str
 @trade_channels()
 async def add(ctx:Context, card:Union[int, str], amount:Union[int, str]=1):
     await ctx.message.delete(delay=1)
-    transaction = db.transactions.get_active_transaction(ctx.author.id)
+    transaction = db.transactions.get_active_transaction(ctx.author.id, ctx.guild.id)
     await trade_add(ctx, transaction, card, amount=amount)
 
 @client.command(aliases=['remove'])
@@ -382,7 +375,7 @@ async def untrade(ctx:Context, card:Union[int, str], amount:Union[int, str]=1):
     if isinstance(amount, int) and amount < 1:
         raise util.BadArgument('Amount', amount)
 
-    transaction = db.transactions.get_active_transaction(ctx.author.id)
+    transaction = db.transactions.get_active_transaction(ctx.author.id, ctx.guild.id)
     if not transaction: raise util.NoActiveTrade()
     if transaction.locked: return
 
@@ -397,7 +390,7 @@ async def untrade(ctx:Context, card:Union[int, str], amount:Union[int, str]=1):
 async def accept(ctx:Context):
     await ctx.message.delete(delay=1)
 
-    transaction = db.transactions.get_active_transaction(ctx.author.id)
+    transaction = db.transactions.get_active_transaction(ctx.author.id, ctx.guild.id)
     if not transaction: raise util.NoActiveTrade()
     if transaction.has_accepted(ctx.author.id): return
 
@@ -411,7 +404,7 @@ async def accept(ctx:Context):
 async def unaccept(ctx:Context):
     await ctx.message.delete(delay=1)
 
-    transaction = db.transactions.get_active_transaction(ctx.author.id)
+    transaction = db.transactions.get_active_transaction(ctx.author.id, ctx.guild.id)
     if not transaction: raise util.NoActiveTrade()
     if not transaction.has_accepted(ctx.author.id): return
 
@@ -423,7 +416,7 @@ async def unaccept(ctx:Context):
 async def cancel(ctx:Context):
     await ctx.message.delete(delay=1)
 
-    transaction = db.transactions.close_active_transaction(ctx.author.id)
+    transaction = db.transactions.close_active_transaction(ctx.author.id, ctx.guild.id)
     if transaction:
         name_1 = ctx.guild.get_member(transaction.user_1).display_name
         name_2 = ctx.guild.get_member(transaction.user_2).display_name
@@ -452,16 +445,18 @@ async def card_spawn_timer():
 
         await asyncio.sleep(delay)
 
-        def spawnable(channel):
-            return isinstance(channel, d.TextChannel) and channel.id not in cfg.config['TRADE_CHANNELS']
+        for guild in client.guilds:
+            def spawnable(channel):
+                return isinstance(channel, d.TextChannel) \
+                       and channel.id not in cfg.config['TRADE_CHANNELS'][guild.id]
 
-        channels = set(map(
-            attrgetter('id'), # Map channel to channel ID
-            filter(spawnable, client.get_all_channels()) # Filter for only TextChannels
-        ))
-        await spawn(client.get_channel(
-            random.choice(list(channels - cfg.config['SPAWN_EXCLUDE_CHANNELS']))
-        ))
+            channels = set(map(
+                attrgetter('id'), # Map channel to channel ID
+                filter(spawnable, guild.channels) # Filter for only TextChannels
+            ))
+            await spawn(client.get_channel(
+                random.choice(list(channels - cfg.config['SPAWN_EXCLUDE_CHANNELS'][guild.id]))
+            ))
 
 
 # --- Main --- #

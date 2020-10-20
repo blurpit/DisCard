@@ -69,6 +69,7 @@ class Card(Model):
     claim_timestamp = Column(DateTime, nullable=True)
     message_id = Column(Integer, nullable=False)
     channel_id = Column(Integer, nullable=False)
+    guild_id = Column(Integer, nullable=False)
 
     @property
     def owner_id_list(self):
@@ -122,6 +123,7 @@ class Transaction(Model):
     accepted_1 = Column(Boolean, nullable=False, default=False)
     accepted_2 = Column(Boolean, nullable=False, default=False)
     message_id = Column(Integer, nullable=True)
+    guild_id = Column(Integer, nullable=False)
 
     @hybrid_property
     def complete(self):
@@ -189,7 +191,7 @@ class Transaction(Model):
             "• If you change your mind, use **$unaccept** and you'll be able to change your offer.\n" \
             "• If the trade is a total bust, call **$cancel** to call the whole thing off.\n" \
             "• When both parties have accepted, the trade will be complete, and you'll each receive each other's offered cards!\n" \
-            "Be sure to check your inventory while trading! **$inventory** is disabled here to reduce clutter, but you can use it in #ccc-commands, or in DMs."
+            "Be sure to check your inventory while trading! **$inventory** is disabled here to reduce clutter, but you can use it in #ccc-commands."
 
         embed.add_field(
             name=f"{name_1}'s Offer",
@@ -209,14 +211,17 @@ class Transaction(Model):
         return embed
 
     def __repr__(self):
-        return "Transaction({0.id}, {0.user_1}, {0.user_2}, {0.cards_1}, {0.cards_2}, {0.accepted_1}, {0.accepted_2}" \
-               "{0.message_id})".format(self)
+        return "Transaction({0.id}, {0.user_1}, {0.user_2}, {0.cards_1}, {0.cards_2}, " \
+               "{0.accepted_1}, {0.accepted_2} {0.message_id})".format(self)
 
 class Inventory:
-    def __init__(self, user_id):
+    def __init__(self, user_id, guild_id):
         self.user_id = user_id
         self.inv = {}
-        self.cards = session.query(Card).filter(Card.owner_ids.endswith(str(user_id))).all()
+        self.cards = session.query(Card) \
+            .filter_by(guild_id=guild_id) \
+            .filter(Card.owner_ids.endswith(str(user_id))) \
+            .all()
         self.inv = util.card_count_map(self.cards)
         self.max_page = util.max_page(len(self.inv))
 
@@ -260,24 +265,28 @@ class Inventory:
             key=lambda val: (val[1].set.order, val[1].rarity.order, val[1].id)
         )[num_items*page : num_items*(page+1)]
 
-        embed.description = f'You own {len(self)} cards! ({len(self.inv)} unique)\n'
-        embed.description += '\n**' + items[0][1].set.text + ' Set**'
-        for i in range(len(items)):
-            count, definition = items[i]
-            embed.description += '\n• ' + items[i][1].string(set=False, count=count)
-            if i+1 < len(items) and definition.set != items[i+1][1].set:
-                embed.description += '\n\n**' + items[i+1][1].set.text + ' Set**'
+        if items:
+            embed.description = f'You own {len(self)} cards! ({len(self.inv)} unique)\n'
+            embed.description += '\n**' + items[0][1].set.text + ' Set**'
+            for i in range(len(items)):
+                count, definition = items[i]
+                embed.description += '\n• ' + items[i][1].string(set=False, count=count)
+                if i+1 < len(items) and definition.set != items[i+1][1].set:
+                    embed.description += '\n\n**' + items[i+1][1].set.text + ' Set**'
+        else:
+            embed.description = "There's nothing in your inventory. Use **$claim** to claim a card next time you see one!"
 
         embed.url = cfg.config['HELP_URL']
         embed.colour = d.Color.blue()
         return embed
 
 class CardDex:
-    def __init__(self, user_id):
+    def __init__(self, user_id, guild_id):
         self.user_id = user_id
         self.length = session.query(CardDefinition.id).count()
         self.definitions = session.query(CardDefinition) \
             .join(Card) \
+            .filter(Card.guild_id == guild_id) \
             .filter(Card.owner_ids.contains(str(user_id))) \
             .all()
         self.max_page = util.max_page(self.length)
@@ -324,12 +333,13 @@ class Leaderboard:
     UNWEIGHTED = 0
     WEIGHTED = 1
 
-    def __init__(self, mode):
+    def __init__(self, mode, guild_id):
         self.mode = mode
-        cards = session.query(Card).filter(and_(
-            Card.claim_timestamp != None,
-            not_(Card.owner_ids.endswith(';NULL'))
-        )).all()
+        cards = session.query(Card) \
+            .filter(Card.claim_timestamp != None) \
+            .filter(not_(Card.owner_ids.endswith(';0'))) \
+            .filter(Card.guild_id == guild_id) \
+            .all()
         self.board = {}
         for card in cards:
             id = card.owner_id
@@ -358,7 +368,8 @@ class Leaderboard:
         items_end = min(num_items * (page + 1), len(self))
         items = []
         for i, (user_id, score) in enumerate(self.board[items_start:items_end]):
-            items.append(f"#{i+1} - **{get_member(user_id).display_name}**: {score}")
+            user = get_member(user_id)
+            if user: items.append(f"#{i+1} - **{user.display_name}**: {score}")
         embed.description = '\n'.join(items)
 
         embed.url = cfg.config['HELP_URL']

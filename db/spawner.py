@@ -32,13 +32,14 @@ def get_definition(card=None):
         elif isinstance(card, str):
             return session.query(CardDefinition).filter_by(name=card).one_or_none()
 
-def create_card_instance(definition, message_id, channel_id):
+def create_card_instance(definition, message_id, channel_id, guild_id):
     session.add(Card(
         card_id=definition.id,
         owner_ids=None,
         spawn_timestamp=dt.datetime.utcnow(),
         message_id=message_id,
-        channel_id=channel_id
+        channel_id=channel_id,
+        guild_id=guild_id
     ))
     session.commit()
 

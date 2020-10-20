@@ -24,9 +24,10 @@ def card_count_map(cards):
         count[card.card_id][0] += 1
     return count
 
-def query_card_amount(user_id, card, amount, exclude=()):
+def query_card_amount(user_id, guild_id, card, amount, exclude=()):
     return db.session.query(db.Card) \
         .join(db.CardDefinition) \
+        .filter(db.Card.guild_id == guild_id) \
         .filter(db.Card.owner_ids.endswith(str(user_id))) \
         .filter(or_(db.Card.card_id == card, db.CardDefinition.name == card)) \
         .filter(db.Card.id.notin_(exclude)) \
