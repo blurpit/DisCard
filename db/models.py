@@ -125,11 +125,9 @@ class Transaction(Model):
     message_id = Column(Integer, nullable=True)
     guild_id = Column(Integer, nullable=False)
 
-    @hybrid_property
     def complete(self):
         return self.accepted_1 and self.accepted_2
 
-    @hybrid_property
     def locked(self):
         return self.accepted_1 or self.accepted_2
 

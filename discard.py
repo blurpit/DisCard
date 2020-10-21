@@ -405,6 +405,7 @@ async def accept(ctx:Context):
     # Discard
     if transaction.is_party(0):
         await discard_accept(ctx, transaction)
+    db.session.commit()
 
     if transaction.complete:
         db.transactions.execute(transaction)

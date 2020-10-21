@@ -7,7 +7,7 @@ def get_active_transaction(user_id, guild_id):
     return session.query(Transaction) \
         .filter_by(guild_id=guild_id) \
         .filter(or_(Transaction.user_1 == user_id, Transaction.user_2 == user_id)) \
-        .filter(not_(Transaction.complete)) \
+        .filter(not_(and_(Transaction.accepted_1, Transaction.accepted_2))) \
         .one_or_none()
 
 def open_transaction(user_1, user_2, guild_id):
