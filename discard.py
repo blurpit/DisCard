@@ -254,12 +254,12 @@ async def inventory_page_turn(message, user, page, max_page):
 
 @client.command(aliases=['preview', 'view'])
 @command_channel()
-async def show(ctx:Context, card_id:int):
+async def show(ctx:Context, card:Union[int, str]):
     inv = db.Inventory(ctx.author.id, ctx.guild.id)
-    if card_id in inv:
-        await ctx.send(embed=inv[card_id].get_embed(
+    if card in inv:
+        await ctx.send(embed=inv[card].get_embed(
             ctx, preview=True,
-            count=inv.count(card_id))
+            count=inv.count(card))
         )
     else:
         await ctx.send("You don't have that card in your collection.")

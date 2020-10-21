@@ -248,7 +248,7 @@ class Inventory:
         if isinstance(item, int):
             return d.utils.get(self.cards, card_id=item)
         elif isinstance(item, str):
-            return d.utils.get(self.cards, name=item)
+            return d.utils.get(self.cards, definition__name=item)
 
     def __iter__(self):
         return iter(self.cards)
@@ -257,8 +257,12 @@ class Inventory:
         """ Number of unique cards """
         return len(self.cards)
 
-    def __contains__(self, card_id):
-        return card_id in self.inv
+    def __contains__(self, card):
+        if isinstance(card, int):
+            return card in self.inv
+        else:
+            print(list(map(lambda item: item[1].name, self.inv.values())))
+            return card in map(lambda item: item[1].name, self.inv.values())
 
     def filter(self, **kwargs):
         """ Filter the inventory by certain attributes. Ex: inv.filter(set=Set.SMASH, rarity=Rarity.RARE) """
@@ -267,8 +271,11 @@ class Inventory:
             self.cards
         )
 
-    def count(self, card_id):
-        return self.inv[card_id][0]
+    def count(self, card):
+        if isinstance(card, int):
+            return self.inv[card][0]
+        else:
+            return next((count for count, definition in self.inv.values() if definition.name == card), 0)
 
     def get_embed(self, name, page):
         page = util.clamp(page, 0, self.max_page)
