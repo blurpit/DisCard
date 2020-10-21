@@ -32,16 +32,22 @@ def get_definition(card=None):
         elif isinstance(card, str):
             return session.query(CardDefinition).filter_by(name=card).one_or_none()
 
+def get_random_definition():
+    rand = random.randrange(0, session.query(CardDefinition.id).count())
+    return session.query(CardDefinition)[rand]
+
 def create_card_instance(definition, message_id, channel_id, guild_id):
-    session.add(Card(
+    card = Card(
         card_id=definition.id,
         owner_ids=None,
         spawn_timestamp=dt.datetime.utcnow(),
         message_id=message_id,
         channel_id=channel_id,
         guild_id=guild_id
-    ))
+    )
+    session.add(card)
     session.commit()
+    return card
 
 def delete_card_instance(card):
     if isinstance(card, Card): session.delete(card)

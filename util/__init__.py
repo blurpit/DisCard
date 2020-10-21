@@ -50,6 +50,10 @@ def query_card_map(card_ids):
         .all()
     return {card_id: [count, definition] for card_id, count, definition in cards}
 
+def calculate_discard_offer(card_ids):
+    # TODO: Implement discard offer
+    return {cfg.Rarity.RARE: 2, cfg.Rarity.EPIC: 1}
+
 
 class CleanException(Exception):
     """ CleanException messages will be sent as normal messages to the context """

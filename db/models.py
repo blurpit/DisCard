@@ -176,6 +176,11 @@ class Transaction(Model):
         return '\n'.join('• ' + definition.string(count=count)
                          for count, definition in sorted(card_map.values(), key=lambda x: x[1].id))
 
+    @staticmethod
+    def _get_discard_offer_field_text(offer):
+        if not offer: return "No cards offered."
+        return '\n'.join(f'• Random **{rarity.text}** x {count}' for rarity, count in offer.items())
+
     def get_embed(self, name_1, name_2, closed=False):
         embed = d.Embed()
         embed.set_author(name=cfg.config['EMBED_AUTHOR'])
@@ -184,14 +189,28 @@ class Transaction(Model):
             u'\u2705' if self.accepted_1 else '', name_1,
             u'\u2705' if self.accepted_2 else '', name_2
         )
-        if not closed and not self.complete: embed.description = "__**How to trade:**__\n" \
-            "• Offer one or more of your cards using **$trade [Card ID] [Amount]**.\n" \
-            "• Remove a card you offered with **$untrade [Card ID] [Amount]**.\n" \
-            "• When the trade looks good, accept it using **$accept**. Once a trade is accepted, cards can no longer be added or removed.\n" \
-            "• If you change your mind, use **$unaccept** and you'll be able to change your offer.\n" \
-            "• If the trade is a total bust, call **$cancel** to call the whole thing off.\n" \
-            "• When both parties have accepted, the trade will be complete, and you'll each receive each other's offered cards!\n" \
-            "Be sure to check your inventory while trading! **$inventory** is disabled here to reduce clutter, but you can use it in #ccc-commands."
+
+        if not closed and not self.complete:
+            if self.is_party(0):
+                embed.description = "__**How to Trade:**__\n" \
+                    "• Offer one or more of your cards using **$trade [Card ID] [Amount]**.\n" \
+                    "• Remove one or more cards you offered with **$untrade [Card ID] [Amount]**.\n" \
+                    "• When the trade looks good, accept it using **$accept**.\n" \
+                    "• Call **$cancel** to call the trade off.\n" \
+                    "Be sure to check your inventory while discarding! **$inventory** is disabled here to reduce clutter, but you can use it in #ccc-commands.\n" \
+                    "__**Trading with DisCard:**__\n" \
+                    "• For every 3 x Common/Rare cards you offer, DisCard will offer 1 x Random Rare/Epic card, respectively.\n" \
+                    "• For every 3 x Epic cards you offer, DisCard will offer 2 x Random Epic cards.\n" \
+                    "• For every 1 x Member card you offer, DisCard will offer 1 x Random Epic card."
+            else:
+                embed.description = "__**How to Trade:**__\n" \
+                    "• Offer one or more of your cards using **$trade [Card ID] [Amount]**.\n" \
+                    "• Remove a card you offered with **$untrade [Card ID] [Amount]**.\n" \
+                    "• When the trade looks good, accept it using **$accept**. Once a trade is accepted, cards can no longer be added or removed.\n" \
+                    "• If you change your mind, use **$unaccept** and you'll be able to change your offer.\n" \
+                    "• If the trade is a total bust, call **$cancel** to call the whole thing off.\n" \
+                    "• When both parties have accepted, the trade will be complete, and you'll each receive each other's offered cards!\n" \
+                    "Be sure to check your inventory while trading! **$inventory** is disabled here to reduce clutter, but you can use it in #ccc-commands."
 
         embed.add_field(
             name=f"{name_1}'s Offer",
@@ -199,7 +218,9 @@ class Transaction(Model):
         )
         embed.add_field(
             name=f"{name_2}'s Offer",
-            value=self._get_offer_field_text(util.query_card_map(self.card_set(2)))
+            value=self._get_discard_offer_field_text(util.calculate_discard_offer(self.card_set(1)))
+                if self.is_party(0) and not self.complete else
+                self._get_offer_field_text(util.query_card_map(self.card_set(2)))
         )
 
         if closed: embed.set_footer(text='Trade has been canceled.')

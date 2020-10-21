@@ -304,7 +304,7 @@ async def trade(ctx:Context, action:Union[d.Member, int, str, None]=None, amount
 
     if isinstance(action, d.Member):
         if action == ctx.author: await ctx.send("Hey, feel free to trade with yourself all you like, you don't need me for that.")
-        elif action == client.user: await ctx.send("I'd love to, but I gotta keep it fair here, and trading cards with the dealer is a bit disingenuous.")
+        elif action == client.user: await ctx.send("Wanna trade some cards with me? Try using **$discard**!")
         elif action.bot: await ctx.send("Sorry, but bots just don't show enough appreciation for the art of the trade for me to support that. Call it principle.")
         elif not transaction:
             transaction = db.transactions.open_transaction(ctx.author.id, action.id, ctx.guild.id)
@@ -329,13 +329,19 @@ async def trade(ctx:Context, action:Union[d.Member, int, str, None]=None, amount
         if not transaction: raise util.NoActiveTrade()
 
 async def update_trade(ctx:Context, transaction:db.Transaction, closed=False):
-    name_1 = ctx.guild.get_member(transaction.user_1).display_name
-    name_2 = ctx.guild.get_member(transaction.user_2).display_name
+    member_1 = ctx.guild.get_member(transaction.user_1)
+    member_2 = ctx.guild.get_member(transaction.user_2) if transaction.user_2 != 0 else client.user
     if transaction.message_id:
         msg = await ctx.channel.fetch_message(transaction.message_id)
-        await msg.edit(embed=transaction.get_embed(name_1, name_2, closed=closed))
+        await msg.edit(
+            content=f'{member_1.mention} {member_2.mention}',
+            embed=transaction.get_embed(member_1.display_name, member_2.display_name, closed=closed)
+        )
     else:
-        msg = await ctx.send(embed=transaction.get_embed(name_1, name_2, closed=closed))
+        msg = await ctx.send(
+            content=f'{member_1.mention} {member_2.mention}',
+            embed=transaction.get_embed(member_1.display_name, member_2.display_name, closed=closed)
+        )
         db.transactions.set_transaction_message(transaction, msg.id)
 
 async def resend_trade(ctx:Context, transaction:db.Transaction):
@@ -395,6 +401,11 @@ async def accept(ctx:Context):
     if transaction.has_accepted(ctx.author.id): return
 
     transaction.set_accepted(ctx.author.id, True)
+
+    # Discard
+    if transaction.is_party(0):
+        await discard_accept(ctx, transaction)
+
     if transaction.complete:
         db.transactions.execute(transaction)
     await update_trade(ctx, transaction)
@@ -418,12 +429,46 @@ async def cancel(ctx:Context):
 
     transaction = db.transactions.close_active_transaction(ctx.author.id, ctx.guild.id)
     if transaction:
-        name_1 = ctx.guild.get_member(transaction.user_1).display_name
-        name_2 = ctx.guild.get_member(transaction.user_2).display_name
+        member_1 = ctx.guild.get_member(transaction.user_1)
+        member_2 = ctx.guild.get_member(transaction.user_2) if transaction.user_2 != 0 else client.user
         await update_trade(ctx, transaction, closed=True)
-        await ctx.send(f"Trade between {name_1} and {name_2} has been closed.")
+        await ctx.send(f"Trade between {member_1.display_name} and {member_2.display_name} has been closed.")
     else:
         raise util.NoActiveTrade()
+
+@client.command()
+@trade_channels()
+async def discard(ctx:Context, card:Union[int, str]=None, amount:Union[int, str]=1):
+    await ctx.message.delete(delay=1)
+
+    transaction = db.transactions.get_active_transaction(ctx.author.id, ctx.guild.id)
+    if not transaction:
+        transaction = db.transactions.open_transaction(ctx.author.id, 0, ctx.guild.id)
+        await update_trade(ctx, transaction)
+    elif not transaction.is_party(0):
+        raise await ctx.send("You already have an active trade open. Please finish or cancel it before starting another one.")
+
+    if card == 'resend':
+        if not transaction: raise util.NoActiveTrade()
+        await resend_trade(ctx, transaction)
+
+    if card is not None:
+        if not await trade_add(ctx, transaction, card, amount):
+            raise util.NotInInventory(card)
+
+async def discard_accept(ctx:Context, transaction:db.Transaction):
+    offer = util.calculate_discard_offer(transaction.card_set(1))
+    if not offer: return
+
+    cards = []
+    for rarity, count in offer.items():
+        for i in range(count):
+            definition = db.spawner.get_random_definition() # Ignore pools
+            card = db.spawner.create_card_instance(definition, 0, 0, ctx.guild.id)
+            card.owner_ids = '0'
+            cards.append(str(card.id))
+    transaction.cards_2 = ';'.join(cards)
+    transaction.accepted_2 = True
 
 
 # --- Event Schedulers --- #
