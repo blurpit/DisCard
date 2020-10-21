@@ -90,7 +90,8 @@ async def on_ready():
     activity = d.Activity(type=d.ActivityType.listening, name='the sweet sound of a shuffling deck')
     await client.change_presence(activity=activity)
 
-    client.loop.create_task(card_spawn_timer())
+    if cfg.config['SPAWN_INTERVAL'] > 0:
+        client.loop.create_task(card_spawn_timer())
 
 @client.event
 async def on_command_error(ctx:Context, error):
