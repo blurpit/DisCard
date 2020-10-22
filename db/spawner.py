@@ -8,24 +8,22 @@ from . import *
 
 def get_definition(card=None):
     if card is None:
-        # Mapping from Rarity to the total pool amount for that rarity
-        pools = session.query(CardDefinition.rarity, func.count(CardDefinition.id)) \
-            .group_by(CardDefinition.rarity) \
-            .all()
-        pools = {rarity: count*rarity.pool for rarity, count in pools}
+        pools = {}
+        q = session.query(CardDefinition.rarity, CardDefinition, func.count()) \
+            .select_from(Card).join(CardDefinition) \
+            .group_by(CardDefinition.id) \
+            .order_by(CardDefinition.id)
 
-        # Mapping from Rarity to the number of cards of that rarity that have been claimed
-        used = session.query(CardDefinition.rarity, func.count(Card.id)) \
-            .join(CardDefinition) \
-            .filter(not_(Card.owner_ids.endswith(';0'))) \
-            .group_by(CardDefinition.rarity) \
-            .all()
-        used = dict(used)
+        for rarity, definition, count in q.all():
+            pool = rarity.pool - count
+            if pool > 0:
+                if rarity not in pools:
+                    pools[rarity] = {}
+                pools[rarity][definition.id] = (pool, definition)
 
-        pools = {rarity: count-used[rarity] for rarity, count in pools.items() if pools[rarity] > used[rarity] }
         if pools:
-            rarity = random.choices(list(pools.keys()), weights=[r.chance for r in pools])[0]
-            return session.query(CardDefinition).filter_by(rarity=rarity).order_by(func.random()).first()
+            r = random.choices(list(pools.keys()), weights=[r.chance for r in pools])[0]
+            return random.choice(list(pools[r].values()))[1]
     else:
         if isinstance(card, int):
             return session.query(CardDefinition).filter_by(id=card).one_or_none()
