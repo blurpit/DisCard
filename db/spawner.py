@@ -52,9 +52,10 @@ def delete_card_instance(card):
     else: session.query(Card).filter_by(id=card).delete()
     session.commit()
 
-def claim(user_id, channel_id):
+def claim(user_id, channel_id, guild_id):
     card = session.query(Card) \
         .filter_by(channel_id=channel_id) \
+        .filter_by(guild_id=guild_id) \
         .filter(Card.owner_ids == None) \
         .order_by(Card.spawn_timestamp.desc()) \
         .first()
@@ -63,6 +64,7 @@ def claim(user_id, channel_id):
         return None
 
     latest_claim = session.query(Card.claim_timestamp) \
+        .filter_by(guild_id=guild_id) \
         .filter(Card.owner_ids == str(user_id)) \
         .order_by(Card.claim_timestamp.desc()) \
         .first()

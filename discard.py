@@ -220,7 +220,7 @@ async def give(ctx:Context, recipient:d.Member, card_id:int):
 
 @client.command()
 async def claim(ctx:Context):
-    card = db.spawner.claim(ctx.author.id, ctx.channel.id)
+    card = db.spawner.claim(ctx.author.id, ctx.channel.id, ctx.guild.id)
     if card is None:
         # No claimable cards
         await ctx.message.add_reaction(emoji['x'])
