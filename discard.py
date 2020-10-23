@@ -485,7 +485,7 @@ async def discard_accept(ctx:Context, transaction:db.Transaction):
     cards = []
     for rarity, count in offer.items():
         for i in range(count):
-            definition = db.spawner.get_random_definition() # Ignore pools
+            definition = db.spawner.get_random_definition(rarity=rarity) # Ignore pools
             card = db.spawner.create_card_instance(definition, 0, 0, ctx.guild.id, owner_id='0')
             cards.append(str(card.id))
     transaction.cards_2 = ';'.join(cards)

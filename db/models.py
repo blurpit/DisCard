@@ -129,9 +129,11 @@ class Transaction(Model):
     message_id = Column(Integer, nullable=True)
     guild_id = Column(Integer, nullable=False)
 
+    @property
     def complete(self):
         return self.accepted_1 and self.accepted_2
 
+    @property
     def locked(self):
         return self.accepted_1 or self.accepted_2
 
@@ -265,7 +267,6 @@ class Inventory:
         if isinstance(card, int):
             return card in self.inv
         else:
-            print(list(map(lambda item: item[1].name, self.inv.values())))
             return card in map(lambda item: item[1].name, self.inv.values())
 
     def filter(self, **kwargs):
