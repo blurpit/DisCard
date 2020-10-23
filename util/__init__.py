@@ -50,6 +50,15 @@ def query_card_map(card_ids):
         .all()
     return {card_id: [count, definition] for card_id, count, definition in cards}
 
+def query_rarity_map(card_ids):
+    if not card_ids: return {}
+    cards = db.session.query(db.CardDefinition.rarity, func.count()) \
+        .select_from(db.Card).join(db.CardDefinition) \
+        .filter(db.Card.id.in_(card_ids)) \
+        .group_by(db.CardDefinition.rarity) \
+        .all()
+    return dict(cards)
+
 def calculate_discard_offer(card_ids):
     # TODO: Implement discard offer
     return {cfg.Rarity.RARE: 2, cfg.Rarity.EPIC: 1}

@@ -1,7 +1,7 @@
 import datetime as dt
 import random
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 from . import *
 
@@ -30,14 +30,17 @@ def get_definition(card=None):
         elif isinstance(card, str):
             return session.query(CardDefinition).filter_by(name=card).one_or_none()
 
-def get_random_definition():
-    rand = random.randrange(0, session.query(CardDefinition.id).count())
-    return session.query(CardDefinition)[rand]
+def get_random_definition(card_set=None, rarity=None):
+    return session.query(CardDefinition) \
+        .filter(or_(card_set is None, CardDefinition.set == card_set)) \
+        .filter(or_(rarity is None, CardDefinition.rarity == rarity)) \
+        .order_by(func.random()) \
+        .first()
 
-def create_card_instance(definition, message_id, channel_id, guild_id):
+def create_card_instance(definition, message_id, channel_id, guild_id, owner_id=None):
     card = Card(
         card_id=definition.id,
-        owner_ids=None,
+        owner_ids=owner_id,
         spawn_timestamp=dt.datetime.utcnow(),
         message_id=message_id,
         channel_id=channel_id,

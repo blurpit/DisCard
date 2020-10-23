@@ -2,16 +2,17 @@ from enum import Enum
 
 
 class Rarity(Enum):
-    COMMON = ('Common', 3, 0.65, 1,  20, 0x9aa9b5)
-    RARE   = ('Rare',   2, 0.25, 5,  15, 0xffd900)
-    EPIC   = ('Epic',   1, 0.05, 20, 5,  0xba24ff)
-    MEMBER = ('Member', 0, 0.05, 25, 1,  0xff2b24)
+    COMMON = ('Common', 3, 0.65, 1,  0,    20, 0x9aa9b5)
+    RARE   = ('Rare',   2, 0.25, 5,  0.75, 15, 0xffd900)
+    EPIC   = ('Epic',   1, 0.05, 20, 0.25, 5,  0xba24ff)
+    MEMBER = ('Member', 0, 0.05, 25, 0,    1,  0xff2b24)
 
-    def __init__(self, text, order, chance, weight, pool, color):
+    def __init__(self, text, order, chance, weight, event_weight, pool, color):
         self.text = text
         self.order = order
         self.chance = chance
         self.weight = weight
+        self.event_weight = event_weight
         self.pool = pool
         self.color = color
 

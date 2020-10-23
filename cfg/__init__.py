@@ -1,29 +1,47 @@
 from .enums import *
 
 config = dict(
-    COMMAND_CHANNELS = {
+    COMMAND_CHANNELS = { # Channels where regular commands are allowed
         693124716176736386: {766730238193041438}, # Dumping Grounds
         768172182312058880: {768172182312058884} # Dump2
     },
-    TRADE_CHANNELS = {
+    TRADE_CHANNELS = { # Channels where trade commands are allowed
         693124716176736386: {767876298310942720}, # Dumping Grounds
         768172182312058880: {768203474214191104} # Dump2
     },
-    SPAWN_EXCLUDE_CHANNELS = {
+    SPAWN_EXCLUDE_CHANNELS = { # Which channels cards should NOT be able to spawn in
         693124716176736386: {767822158294286387, 767855584560939029}, # Dumping Grounds
         768172182312058880: set()
     },
-    SPAWN_INTERVAL = 0,
-    SPAWN_INTERVAL_START_TIME = 9, # EST
-    SPAWN_INTERVAL_END_TIME = 23, # EST
-    SPAWN_INTERVAL_VARIATION = 0.2,
-    SPAWN_MESSAGE_CHANCE = 0,
-    CLAIM_COOLDOWN = 0,
-    IMAGE_URL_BASE = 'https://cdn.discordapp.com/attachments/767822158294286387/{}/{}.png',
-    HELP_URL = 'https://docs.google.com/document/d/1wYg8EPSKm8Ndum1659isF7ho8P-bPlJHRELrXENn1fs/edit?usp=sharing',
-    EMBED_AUTHOR = 'Cool Cids Cards',
-    ITEMS_PER_PAGE = 15
+    SPAWN_EVENT_CHANNELS = { # Which channels card events can spawn
+        693124716176736386: {766730238193041438},
+        768172182312058880: {768172182312058884}
+    },
+    SPAWN_INTERVAL = 0, # Time (seconds) between card spawns (0 to disable)
+    SPAWN_INTERVAL_START_TIME = 9, # EST time for when cards can start spawning
+    SPAWN_INTERVAL_END_TIME = 23, # EST time for when cards stop spawning
+    SPAWN_INTERVAL_VARIATION = 0.2, # Percent variation for delay between spawns
+    SPAWN_MESSAGE_CHANCE = 0, # Chance to spawn card on each message
+    SPAWN_EVENT_TIMES = [15], # EST times when card events should spawn
+    SPAWN_EVENT_VARIATION = 10*60, # Variation in seconds
+    CLAIM_COOLDOWN = 0, # Cooldown (seconds) between allowed card claims
+    IMAGE_URL_BASE = 'https://cdn.discordapp.com/attachments/767822158294286387/{}/{}.png', # Base URL for card images
+    HELP_URL = 'https://docs.google.com/document/d/1wYg8EPSKm8Ndum1659isF7ho8P-bPlJHRELrXENn1fs/edit?usp=sharing', # URL link to help page
+    EMBED_AUTHOR = 'Cool Cids Cards', # Author text for all embeds
+    ITEMS_PER_PAGE = 15 # Number of items that appear before wrapping to the next page
 )
+
+emoji = {
+    'arrows_toggle': u'\U0001f504',
+    'check': u'\u2705',
+    'x': u'\u274c'
+}
+page_controls = {
+    'next': u'\u25B6',
+    'prev': u'\u25c0',
+    'first': u'\u23eA',
+    'last': u'\u23e9',
+}
 
 def set_config(key, value, cast):
     config[key] = cast(value)

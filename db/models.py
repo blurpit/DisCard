@@ -27,22 +27,31 @@ class CardDefinition(Model):
 
     instances:Iterable = relationship('Card', backref='definition')
 
-    def get_embed(self):
+    def get_embed(self, preview=False, count=None):
         embed = d.Embed()
 
         embed.title = f'[#{self.id}] {self.name}'
         embed.url = cfg.config['HELP_URL']
         embed.colour = d.Color(self.rarity.color)
         embed.description = self.description
+
         embed.set_author(name=cfg.config['EMBED_AUTHOR'])
-        embed.set_footer(text=f'This card is unclaimed! Use $claim to claim it!')
         embed.add_field(name='Set', value=f'[{self.expansion.text}] {self.set.text}')
         embed.add_field(name='Rarity', value=self.rarity.text)
         embed.set_thumbnail(url=cfg.config['IMAGE_URL_BASE'].format(self.set.image_id, self.set.name))
+
         if self.image_id is not None:
             embed.set_image(url=cfg.config['IMAGE_URL_BASE'].format(self.image_id, self.id))
         else:
             embed.add_field(name='(No Image)', value='Images pls max', inline=False)
+
+        if preview:
+            if count == 1:
+                embed.set_footer(text=f'You own 1 copy of this card.')
+            elif count is not None:
+                embed.set_footer(text=f'You own {count} copies of this card.')
+        else:
+            embed.set_footer(text=f'This card is unclaimed! Use $claim to claim it!')
 
         return embed
 
@@ -90,21 +99,16 @@ class Card(Model):
     def owner_id(self, id):
         self.owner_id_list += [id]
 
-    def get_embed(self, ctx:Context, preview=False, count=1):
-        embed:d.Embed = self.definition.get_embed()
+    def get_embed(self, ctx:Context, preview=False, count=None):
+        embed:d.Embed = self.definition.get_embed(preview=preview, count=count)
 
         if self.owner_id is not None:
             if preview: embed.title = '[Preview] ' + embed.title
             else: embed.title = ':white_check_mark: ' + embed.title
 
             name = ctx.guild.get_member(self.owner_id).display_name
-
-            if preview:
-                if count == 1: text = f'You own 1 copy of this card.'
-                else: text = f'You own {count} copies of this card.'
-            else:
-                text=f'Claimed by {name}!'
-            embed.set_footer(text=text)
+            if not preview:
+                embed.set_footer(text=f'Claimed by {name}!')
 
         return embed
 
@@ -184,8 +188,8 @@ class Transaction(Model):
         embed.set_author(name=cfg.config['EMBED_AUTHOR'])
         embed.title = "{}Card Trading | {} {} • {} {}".format(
             '[Complete] ' if self.complete else '[Closed] ' if closed else '',
-            u'\u2705' if self.accepted_1 else '', name_1,
-            u'\u2705' if self.accepted_2 else '', name_2
+            cfg.emoji['check'] if self.accepted_1 else '', name_1,
+            cfg.emoji['check'] if self.accepted_2 else '', name_2
         )
 
         if not closed and not self.complete:

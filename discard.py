@@ -15,25 +15,13 @@ import cfg
 import db
 import db.spawner
 import db.transactions
+import events
 import util
 
 intents = d.Intents.default()
 intents.members = True
 client = Bot(command_prefix='$', intents=intents)
 client.remove_command('help')  # Override help command
-
-
-emoji = {
-    'arrows_toggle': u'\U0001f504',
-    'check': u'\u2705',
-    'x': u'\u274c'
-}
-page_controls = {
-    'next': u'\u25B6',
-    'prev': u'\u25c0',
-    'first': u'\u23eA',
-    'last': u'\u23e9',
-}
 
 
 # --- Command Checks --- #
@@ -64,10 +52,10 @@ async def page_turn(message, reaction, func):
     user = message.mentions[0]
     current, max_page = map(lambda n: int(n)-1, message.embeds[0].footer.text[5:].split('/'))  # cut off "Page " and split the slash
 
-    if reaction == page_controls['next']: page = util.clamp(current+1, 0, max_page)
-    elif reaction == page_controls['prev']: page = util.clamp(current-1, 0, max_page)
-    elif reaction == page_controls['first']: page = 0
-    elif reaction == page_controls['last']: page = max_page
+    if reaction == cfg.page_controls['next']: page = util.clamp(current+1, 0, max_page)
+    elif reaction == cfg.page_controls['prev']: page = util.clamp(current-1, 0, max_page)
+    elif reaction == cfg.page_controls['first']: page = 0
+    elif reaction == cfg.page_controls['last']: page = max_page
     else: page = current
 
     if current == page: return
@@ -75,10 +63,23 @@ async def page_turn(message, reaction, func):
 
 async def add_page_reactions(message, max_page):
     if max_page > 0:
-        if max_page > 5: await message.add_reaction(page_controls['first'])
-        await message.add_reaction(page_controls['prev'])
-        await message.add_reaction(page_controls['next'])
-        if max_page > 5: await message.add_reaction(page_controls['last'])
+        if max_page > 5: await message.add_reaction(cfg.page_controls['first'])
+        await message.add_reaction(cfg.page_controls['prev'])
+        await message.add_reaction(cfg.page_controls['next'])
+        if max_page > 5: await message.add_reaction(cfg.page_controls['last'])
+
+def get_random_spawnable_channel(guild):
+    def spawnable(channel):
+        return isinstance(channel, d.TextChannel) \
+               and channel.id not in cfg.config['TRADE_CHANNELS'][guild]
+
+    channels = set(map(
+        attrgetter('id'),  # Map channel to channel ID
+        filter(spawnable, guild.channels)  # Filter for only TextChannels
+    ))
+    return guild.get_channel(
+        random.choice(list(channels - cfg.config['SPAWN_EXCLUDE_CHANNELS'][guild.id]))
+    )
 
 
 # --- Client Events --- #
@@ -92,6 +93,8 @@ async def on_ready():
 
     if cfg.config['SPAWN_INTERVAL'] > 0:
         client.loop.create_task(card_spawn_timer())
+    if cfg.config['SPAWN_EVENT_TIMES']:
+        client.loop.create_task(card_event_timer())
 
 @client.event
 async def on_command_error(ctx:Context, error):
@@ -122,12 +125,12 @@ async def on_reaction_add(reaction:d.Reaction, user:d.Member):
     if not user.bot and reaction.message.author == client.user and not isinstance(reaction.message.channel, d.DMChannel):
 
         title = reaction.message.embeds[0].title
-        if reaction.emoji in page_controls.values():
+        if reaction.emoji in cfg.page_controls.values():
             if 'Card Collection' in title:
                 await page_turn(reaction.message, reaction.emoji, inventory_page_turn)
             elif 'CardDex' in title:
                 await page_turn(reaction.message, reaction.emoji, cardex_page_turn)
-        elif reaction.emoji == emoji['arrows_toggle']:
+        elif reaction.emoji == cfg.emoji['arrows_toggle']:
             if 'Leaderboard' in title:
                 await leaderboard_toggle(reaction.message)
 
@@ -206,6 +209,14 @@ async def spawn(ctx:d.abc.Messageable, card:Union[int, str]=None):
 
 @client.command()
 @admin_command()
+async def spawn_event(ctx:d.abc.Messageable):
+    event = events.create()
+
+    msg = await ctx.send(**event.generate())
+    await event.on_message(msg)
+
+@client.command()
+@admin_command()
 async def give(ctx:Context, recipient:d.Member, card_id:int):
     card = db.Inventory(ctx.author.id, ctx.guild.id)[card_id]
     if card is None:
@@ -223,7 +234,7 @@ async def claim(ctx:Context):
     card = db.spawner.claim(ctx.author.id, ctx.channel.id, ctx.guild.id)
     if card is None:
         # No claimable cards
-        await ctx.message.add_reaction(emoji['x'])
+        await ctx.message.add_reaction(cfg.emoji['x'])
     elif isinstance(card, dt.timedelta):
         # Claim is on cooldown
         total = cfg.config['CLAIM_COOLDOWN'] - card.total_seconds()
@@ -237,7 +248,16 @@ async def claim(ctx:Context):
             await claim(ctx) # Claim the next available card
         else:
             await msg.edit(embed=card.get_embed(ctx))
-            await ctx.message.add_reaction(emoji['check'])
+            await ctx.message.add_reaction(cfg.emoji['check'])
+
+
+# --- Events --- #
+
+@client.command(aliases=['guess'])
+async def answer(ctx:Context, *, guess:str=None):
+    event = events.current(ctx.guild.id)
+    if event:
+        await event.on_guess(ctx, guess)
 
 
 # --- Inventory, Dex, Leaderboard --- #
@@ -281,7 +301,7 @@ async def leaderboard(ctx:Context):
     lb = db.Leaderboard(db.Leaderboard.WEIGHTED, ctx.guild.id)
     msg = await ctx.send(embed=lb.get_embed(ctx.guild.get_member, 0))
     await add_page_reactions(msg, lb.max_page)
-    await msg.add_reaction(emoji['arrows_toggle'])
+    await msg.add_reaction(cfg.emoji['arrows_toggle'])
 
 async def leaderboard_page_turn(message, user, page, max_page):
     mode = db.Leaderboard.WEIGHTED if '| Weighted' in message.embeds[0].title else db.Leaderboard.UNWEIGHTED
@@ -466,8 +486,7 @@ async def discard_accept(ctx:Context, transaction:db.Transaction):
     for rarity, count in offer.items():
         for i in range(count):
             definition = db.spawner.get_random_definition() # Ignore pools
-            card = db.spawner.create_card_instance(definition, 0, 0, ctx.guild.id)
-            card.owner_ids = '0'
+            card = db.spawner.create_card_instance(definition, 0, 0, ctx.guild.id, owner_id='0')
             cards.append(str(card.id))
     transaction.cards_2 = ';'.join(cards)
     transaction.accepted_2 = True
@@ -493,17 +512,26 @@ async def card_spawn_timer():
         await asyncio.sleep(delay)
 
         for guild in client.guilds:
-            def spawnable(channel):
-                return isinstance(channel, d.TextChannel) \
-                       and channel.id not in cfg.config['TRADE_CHANNELS'][guild.id]
+            await spawn(get_random_spawnable_channel(guild))
 
-            channels = set(map(
-                attrgetter('id'), # Map channel to channel ID
-                filter(spawnable, guild.channels) # Filter for only TextChannels
-            ))
-            await spawn(client.get_channel(
-                random.choice(list(channels - cfg.config['SPAWN_EXCLUDE_CHANNELS'][guild.id]))
-            ))
+async def card_event_timer():
+    await client.wait_until_ready()
+    while not client.is_closed():
+        now = pendulum.now('US/Eastern')
+        time = None
+        for hour in cfg.config['SPAWN_EVENT_TIMES']:
+            if hour >= now.hour:
+                time = now.replace(hour=hour, minute=0, second=0, microsecond=0)
+                break
+        if time is None:
+            time = now.add(days=1).replace(hour=cfg.config['SPAWN_EVENT_TIMES'][0], minute=0, second=0, microsecond=0)
+        delay = (time - now).total_seconds()
+
+        await asyncio.sleep(delay)
+
+        for guild in client.guilds:
+            channel_id = random.choice(cfg.config['SPAWN_EVENT_CHANNELS'][guild.id])
+            await spawn_event(guild.get_channel(channel_id))
 
 
 # --- Main --- #
