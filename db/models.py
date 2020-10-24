@@ -373,6 +373,9 @@ class Leaderboard:
             .all()
         self.board = {}
         for card in cards:
+            # Card definition was deleted - probably a test card. Ignore it.
+            if not card.definition: continue
+
             id = card.owner_id
             if id not in self.board: self.board[id] = 0
             if mode == self.UNWEIGHTED:

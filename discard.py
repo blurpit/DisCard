@@ -71,7 +71,7 @@ async def add_page_reactions(message, max_page):
 def get_random_spawnable_channel(guild):
     def spawnable(channel):
         return isinstance(channel, d.TextChannel) \
-               and channel.id not in cfg.config['TRADE_CHANNELS'][guild]
+               and channel.id not in cfg.config['TRADE_CHANNELS'][guild.id]
 
     channels = set(map(
         attrgetter('id'),  # Map channel to channel ID
@@ -273,9 +273,9 @@ async def inventory_page_turn(message, user, page, max_page):
     inv = db.Inventory(user.id, message.guild.id)
     await message.edit(content=user.mention, embed=inv.get_embed(user.display_name, page))
 
-@client.command(aliases=['preview', 'view'])
+@client.command(aliases=['show', 'preview'])
 @command_channel()
-async def show(ctx:Context, card:Union[int, str]):
+async def view(ctx:Context, card:Union[int, str]):
     inv = db.Inventory(ctx.author.id, ctx.guild.id)
     if card in inv:
         await ctx.send(embed=inv[card].get_embed(
@@ -285,9 +285,9 @@ async def show(ctx:Context, card:Union[int, str]):
     else:
         await ctx.send("You don't have that card in your collection.")
 
-@client.command(aliases=['deck', 'cardeck', 'carddeck', 'dex', 'carddex'])
+@client.command(aliases=['deck', 'cardeck', 'carddeck', 'cardex', 'carddex'])
 @command_channel()
-async def cardex(ctx:Context):
+async def dex(ctx:Context):
     dex = db.CardDex(ctx.author.id, ctx.guild.id)
     msg = await ctx.send(content=ctx.author.mention, embed=dex.get_embed(ctx.author.display_name, 0))
     await add_page_reactions(msg, dex.max_page)
@@ -296,7 +296,8 @@ async def cardex_page_turn(message, user, page, max_page):
     dex = db.CardDex(user.id, message.guild.id)
     await message.edit(content=user.mention, embed=dex.get_embed(user.display_name, page))
 
-@client.command(aliases=['lb'])
+@client.command(aliases=['lb', 'leaderboards', 'scoreboard'])
+@command_channel()
 async def leaderboard(ctx:Context):
     lb = db.Leaderboard(db.Leaderboard.WEIGHTED, ctx.guild.id)
     msg = await ctx.send(embed=lb.get_embed(ctx.guild.get_member, 0))

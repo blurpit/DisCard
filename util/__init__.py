@@ -19,6 +19,9 @@ def card_count_map(cards):
         card_id: [number of cards, CardDefinition] """
     count = {}
     for card in cards:
+        # Card definition was deleted - probably a test card. Ignore it.
+        if not card.definition: continue
+
         if card.card_id not in count:
             count[card.card_id] = [0, card.definition]
         count[card.card_id][0] += 1

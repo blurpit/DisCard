@@ -20,18 +20,18 @@ config = dict(
         768172182312058880: {768172182312058884}
     },
 
-    CLAIM_COOLDOWN = 0, # Cooldown (seconds) between allowed card claims
+    CLAIM_COOLDOWN = 5*60, # Cooldown (seconds) between allowed card claims
 
-    SPAWN_INTERVAL = 0, # Time (seconds) between card spawns (0 to disable)
+    SPAWN_INTERVAL = 37.5*60, # Time (seconds) between card spawns (0 to disable)
     SPAWN_INTERVAL_START_TIME = 9, # EST time for when cards can start spawning
     SPAWN_INTERVAL_END_TIME = 23, # EST time for when cards stop spawning
     SPAWN_INTERVAL_VARIATION = 0.2, # Percent variation for delay between spawns
-    SPAWN_MESSAGE_CHANCE = 0, # Chance to spawn card on each message
+    SPAWN_MESSAGE_CHANCE = 1/15, # Chance to spawn card on each message
 
-    SPAWN_EVENT_GAME_TIMES = [15, 16], # EST times when card events should spawn
-    SPAWN_EVENT_GAME_VARIATION = 0, # Variation in seconds
+    SPAWN_EVENT_GAME_TIMES = [15], # EST times when card events should spawn
+    SPAWN_EVENT_GAME_VARIATION = 15*60, # Variation in seconds
 
-    SPAWN_EVENT_CARD_RATE = 1/3, # Chance to spawn an Event rarity card instead of regular cards
+    SPAWN_EVENT_CARD_RATE = 1/4, # Chance to spawn an Event rarity card instead of regular cards
     ENABLED_EVENT_CARD_SETS = set(), # Which sets should spawn Event cards
 
     ITEMS_PER_PAGE = 15, # Number of items that appear before wrapping to the next page
