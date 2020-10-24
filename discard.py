@@ -29,7 +29,7 @@ client.remove_command('help')  # Override help command
 def admin_command():
     """ Debug command, only available to admins """
     async def predicate(ctx):
-        return ctx.author.id in (426246773162639361, 416127116573278208)
+        return ctx.author.id in cfg.ADMINISTRATORS
     return commands.check(predicate)
 
 def command_channel():
@@ -93,7 +93,7 @@ async def on_ready():
 
     if cfg.config['SPAWN_INTERVAL'] > 0:
         client.loop.create_task(card_spawn_timer())
-    if cfg.config['SPAWN_EVENT_TIMES']:
+    if cfg.config['SPAWN_EVENT_GAME_TIMES']:
         client.loop.create_task(card_event_timer())
 
 @client.event
@@ -519,18 +519,18 @@ async def card_event_timer():
     while not client.is_closed():
         now = pendulum.now('US/Eastern')
         time = None
-        for hour in cfg.config['SPAWN_EVENT_TIMES']:
-            if hour >= now.hour:
+        for hour in cfg.config['SPAWN_EVENT_GAME_TIMES']:
+            if hour > now.hour:
                 time = now.replace(hour=hour, minute=0, second=0, microsecond=0)
                 break
         if time is None:
-            time = now.add(days=1).replace(hour=cfg.config['SPAWN_EVENT_TIMES'][0], minute=0, second=0, microsecond=0)
+            time = now.add(days=1).replace(hour=cfg.config['SPAWN_EVENT_GAME_TIMES'][0], minute=0, second=0, microsecond=0)
         delay = (time - now).total_seconds()
 
         await asyncio.sleep(delay)
 
         for guild in client.guilds:
-            channel_id = random.choice(cfg.config['SPAWN_EVENT_CHANNELS'][guild.id])
+            channel_id = random.choice(list(cfg.config['SPAWN_EVENT_GAME_CHANNELS'][guild.id]))
             await spawn_event(guild.get_channel(channel_id))
 
 
@@ -540,5 +540,4 @@ if __name__ == '__main__':
     with open('client_secret.txt', 'r') as secret:
         token = secret.read().strip()
     client.run(token)
-
     # db.Model.metadata.create_all(db.engine)

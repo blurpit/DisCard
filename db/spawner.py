@@ -8,13 +8,18 @@ from . import *
 
 def get_definition(card=None):
     if card is None:
+        if cfg.config['ENABLED_EVENT_CARD_SETS'] and random.random() < cfg.config['SPAWN_EVENT_CARD_RATE']:
+            return get_random_definition(rarity=cfg.Rarity.EVENT)
+
         pools = {}
-        q = session.query(CardDefinition.rarity, CardDefinition, func.count()) \
+        q = session.query(CardDefinition, func.count()) \
             .select_from(Card).join(CardDefinition) \
+            .filter(CardDefinition.rarity != cfg.Rarity.EVENT) \
             .group_by(CardDefinition.id) \
             .order_by(CardDefinition.id)
 
-        for rarity, definition, count in q.all():
+        for definition, count in q.all():
+            rarity = definition.rarity
             pool = rarity.pool - count
             if pool > 0:
                 if rarity not in pools:
@@ -34,6 +39,7 @@ def get_random_definition(card_set=None, rarity=None):
     return session.query(CardDefinition) \
         .filter(or_(card_set is None, CardDefinition.set == card_set)) \
         .filter(or_(rarity is None, CardDefinition.rarity == rarity)) \
+        .filter(or_(CardDefinition.rarity != cfg.Rarity.EVENT, CardDefinition.set.in_(cfg.config['ENABLED_EVENT_CARD_SETS']))) \
         .order_by(func.random()) \
         .first()
 

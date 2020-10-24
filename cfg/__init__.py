@@ -1,5 +1,7 @@
 from .enums import *
 
+ADMINISTRATORS = {426246773162639361, 416127116573278208}
+
 config = dict(
     COMMAND_CHANNELS = { # Channels where regular commands are allowed
         693124716176736386: {766730238193041438}, # Dumping Grounds
@@ -13,22 +15,29 @@ config = dict(
         693124716176736386: {767822158294286387, 767855584560939029}, # Dumping Grounds
         768172182312058880: set()
     },
-    SPAWN_EVENT_CHANNELS = { # Which channels card events can spawn
+    SPAWN_EVENT_GAME_CHANNELS = { # Which channels card events can spawn
         693124716176736386: {766730238193041438},
         768172182312058880: {768172182312058884}
     },
+
+    CLAIM_COOLDOWN = 0, # Cooldown (seconds) between allowed card claims
+
     SPAWN_INTERVAL = 0, # Time (seconds) between card spawns (0 to disable)
     SPAWN_INTERVAL_START_TIME = 9, # EST time for when cards can start spawning
     SPAWN_INTERVAL_END_TIME = 23, # EST time for when cards stop spawning
     SPAWN_INTERVAL_VARIATION = 0.2, # Percent variation for delay between spawns
     SPAWN_MESSAGE_CHANCE = 0, # Chance to spawn card on each message
-    SPAWN_EVENT_TIMES = [15], # EST times when card events should spawn
-    SPAWN_EVENT_VARIATION = 10*60, # Variation in seconds
-    CLAIM_COOLDOWN = 0, # Cooldown (seconds) between allowed card claims
+
+    SPAWN_EVENT_GAME_TIMES = [15, 16], # EST times when card events should spawn
+    SPAWN_EVENT_GAME_VARIATION = 0, # Variation in seconds
+
+    SPAWN_EVENT_CARD_RATE = 1/3, # Chance to spawn an Event rarity card instead of regular cards
+    ENABLED_EVENT_CARD_SETS = set(), # Which sets should spawn Event cards
+
+    ITEMS_PER_PAGE = 15, # Number of items that appear before wrapping to the next page
     IMAGE_URL_BASE = 'https://cdn.discordapp.com/attachments/767822158294286387/{}/{}.png', # Base URL for card images
     HELP_URL = 'https://docs.google.com/document/d/1wYg8EPSKm8Ndum1659isF7ho8P-bPlJHRELrXENn1fs/edit?usp=sharing', # URL link to help page
-    EMBED_AUTHOR = 'Cool Cids Cards', # Author text for all embeds
-    ITEMS_PER_PAGE = 15 # Number of items that appear before wrapping to the next page
+    EMBED_AUTHOR = 'Cool Cids Cards' # Author text for all embeds
 )
 
 emoji = {

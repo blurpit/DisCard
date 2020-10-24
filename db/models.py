@@ -232,7 +232,7 @@ class Transaction(Model):
         elif self.locked: embed.set_footer(text='Trade is locked until both parties accept.')
 
         embed.url = cfg.config['HELP_URL']
-        embed.colour = d.Color(0xff00c8)
+        embed.colour = d.Color(0x0a00c4)
         return embed
 
     def __repr__(self):
