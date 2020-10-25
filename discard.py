@@ -116,7 +116,8 @@ async def on_command_error(ctx:Context, error):
 async def on_message(message:d.Message):
     if not message.author.bot and not isinstance(message.channel, d.DMChannel):
         if not message.clean_content.startswith(client.command_prefix) \
-                and random.random() <= cfg.config['SPAWN_MESSAGE_CHANCE']:
+                and random.random() <= cfg.config['SPAWN_MESSAGE_CHANCE'] \
+                and dt.datetime.utcnow() > cfg.last_spawn + dt.timedelta(seconds=cfg.config['SPAWN_MESSAGE_COOLDOWN']):
             await spawn(message.channel)
         await client.process_commands(message)
 
@@ -206,6 +207,7 @@ async def spawn(ctx:d.abc.Messageable, card:Union[int, str]=None):
     if definition:
         msg = await ctx.send(embed=definition.get_embed())
         db.spawner.create_card_instance(definition, msg.id, msg.channel.id, msg.guild.id)
+        cfg.last_spawn = dt.datetime.utcnow()
 
 @client.command()
 @admin_command()
@@ -528,10 +530,8 @@ async def card_event_timer():
                 break
         if time is None:
             time = now.add(days=1).replace(hour=cfg.config['SPAWN_EVENT_GAME_TIMES'][0], minute=0, second=0, microsecond=0)
-        delay = (time - now).total_seconds()
-        variation = cfg.config['SPAWN_EVENT_GAME_VARIATION']
-        delay += random.random()*variation*2 - variation
 
+        delay = (time - now).total_seconds() + 30 # Make sure its after the time so it doesn't spawn multiple times
         await asyncio.sleep(delay)
 
         for guild in client.guilds:

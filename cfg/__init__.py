@@ -1,23 +1,24 @@
 from .enums import *
+import datetime as dt
 
 ADMINISTRATORS = {426246773162639361, 416127116573278208}
 
 config = dict(
     COMMAND_CHANNELS = { # Channels where regular commands are allowed
         693124716176736386: {766730238193041438}, # Dumping Grounds
-        768172182312058880: {768172182312058884} # Dump2
+        768172182312058880: {768172182312058884} # Dumpster Fire
     },
     TRADE_CHANNELS = { # Channels where trade commands are allowed
         693124716176736386: {767876298310942720}, # Dumping Grounds
-        768172182312058880: {768203474214191104} # Dump2
+        768172182312058880: {768203474214191104} # Dumpster Fire
     },
     SPAWN_EXCLUDE_CHANNELS = { # Which channels cards should NOT be able to spawn in
         693124716176736386: {767822158294286387, 767855584560939029}, # Dumping Grounds
-        768172182312058880: set()
+        768172182312058880: set() # Dumpster Fire
     },
     SPAWN_EVENT_GAME_CHANNELS = { # Which channels card events can spawn
-        693124716176736386: {766730238193041438},
-        768172182312058880: {768172182312058884}
+        693124716176736386: {766730238193041438}, # Dumping Grounds
+        768172182312058880: {768172182312058884} # Dumpster Fire
     },
 
     CLAIM_COOLDOWN = 5*60, # Cooldown (seconds) between allowed card claims
@@ -27,9 +28,9 @@ config = dict(
     SPAWN_INTERVAL_END_TIME = 23, # EST time for when cards stop spawning
     SPAWN_INTERVAL_VARIATION = 0.2, # Percent variation for delay between spawns
     SPAWN_MESSAGE_CHANCE = 1/15, # Chance to spawn card on each message
+    SPAWN_MESSAGE_COOLDOWN = 60,
 
-    SPAWN_EVENT_GAME_TIMES = [15], # EST times when card events should spawn
-    SPAWN_EVENT_GAME_VARIATION = 15*60, # Variation in seconds
+    SPAWN_EVENT_GAME_TIMES = [16], # EST times when card events should spawn
 
     SPAWN_EVENT_CARD_RATE = 1/4, # Chance to spawn an Event rarity card instead of regular cards
     ENABLED_EVENT_CARD_SETS = set(), # Which sets should spawn Event cards
@@ -51,6 +52,8 @@ page_controls = {
     'first': u'\u23eA',
     'last': u'\u23e9',
 }
+
+last_spawn = dt.datetime(1970, 1, 1)
 
 def set_config(key, value, cast):
     config[key] = cast(value)
