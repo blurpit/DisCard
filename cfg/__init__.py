@@ -5,18 +5,22 @@ ADMINISTRATORS = {426246773162639361, 416127116573278208}
 
 config = dict(
     COMMAND_CHANNELS = { # Channels where regular commands are allowed
+        687146032416555047: {767452299236474910, 687146032416555057}, # ccc-commands, main-chat
         693124716176736386: {766730238193041438}, # Dumping Grounds
         768172182312058880: {768172182312058884} # Dumpster Fire
     },
     TRADE_CHANNELS = { # Channels where trade commands are allowed
+        687146032416555047: {767813524519911486}, # ccc-trades
         693124716176736386: {767876298310942720}, # Dumping Grounds
         768172182312058880: {768203474214191104} # Dumpster Fire
     },
     SPAWN_EXCLUDE_CHANNELS = { # Which channels cards should NOT be able to spawn in
+        687146032416555047: {768193489585963048, 701264348860907582, 700426514436587541, 691763308059164722}, # ccc-feedback, spam, nsfw, secreter-bot-testing
         693124716176736386: {767822158294286387, 767855584560939029}, # Dumping Grounds
         768172182312058880: set() # Dumpster Fire
     },
     SPAWN_EVENT_GAME_CHANNELS = { # Which channels card events can spawn
+        687146032416555047: {687146032416555057}, # main-chat
         693124716176736386: {766730238193041438}, # Dumping Grounds
         768172182312058880: {768172182312058884} # Dumpster Fire
     },
@@ -28,9 +32,9 @@ config = dict(
     SPAWN_INTERVAL_END_TIME = 23, # EST time for when cards stop spawning
     SPAWN_INTERVAL_VARIATION = 0.2, # Percent variation for delay between spawns
     SPAWN_MESSAGE_CHANCE = 1/15, # Chance to spawn card on each message
-    SPAWN_MESSAGE_COOLDOWN = 60,
+    SPAWN_MESSAGE_COOLDOWN = 60, # Minimum time (seconds) between random message spawns
 
-    SPAWN_EVENT_GAME_TIMES = [16], # EST times when card events should spawn
+    SPAWN_EVENT_GAME_TIMES = [15], # EST times when card events should spawn
 
     SPAWN_EVENT_CARD_RATE = 1/4, # Chance to spawn an Event rarity card instead of regular cards
     ENABLED_EVENT_CARD_SETS = set(), # Which sets should spawn Event cards
@@ -53,6 +57,7 @@ page_controls = {
     'last': u'\u23e9',
 }
 
+# Time since last random card spawn
 last_spawn = dt.datetime(1970, 1, 1)
 
 def set_config(key, value, cast):
