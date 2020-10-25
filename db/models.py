@@ -1,11 +1,9 @@
 from operator import itemgetter, attrgetter
-from operator import itemgetter, attrgetter
 from typing import Iterable, List
 
 import discord as d
 from discord.ext.commands import Context
-from sqlalchemy import Column, Integer, DateTime, ForeignKey, Text, Enum, and_, not_, Boolean
-from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy import Column, Integer, DateTime, ForeignKey, Text, Enum, not_, Boolean, func
 from sqlalchemy.orm import relationship
 
 import cfg
@@ -313,13 +311,15 @@ class Inventory:
 
 class CardDex:
     def __init__(self, user_id, guild_id):
-        self.user_id = user_id
         self.length = session.query(CardDefinition.id).count()
         self.definitions = session.query(CardDefinition) \
             .join(Card) \
             .filter(Card.guild_id == guild_id) \
             .filter(Card.owner_ids.contains(str(user_id))) \
             .all()
+        self.set_totals = dict(session.query(CardDefinition.set, func.count()) \
+            .group_by(CardDefinition.set) \
+            .all())
         self.max_page = util.max_page(self.length)
 
     def __contains__(self, card_id):
@@ -351,10 +351,16 @@ class CardDex:
         items_start = num_items*page
         items_end = min(num_items*(page+1), self.length)
         items = [f'[#{i+1}] ???' for i in range(items_start, items_end)]
+        sets = {}
         for definition in self.definitions:
+            sets[definition.set] = sets.get(definition.set, 0) + 1
             if items_start <= definition.id - 1 < items_end:
                 items[(definition.id - 1) % num_items] = definition.string()
         embed.description += '\n• '.join(items)
+
+        badges = ' '.join(s.badge for s, c in sets.items() if c >= self.set_totals[s])
+        if badges:
+            embed.description = badges + '\n' + embed.description
 
         embed.url = cfg.config['HELP_URL']
         embed.colour = d.Color.green()

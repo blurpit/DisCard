@@ -25,19 +25,20 @@ class Expansion(Enum):
         self.text = text
 
 class Set(Enum):
-    MEMBERS   = ('Members',           1, 767845266224578640)
-    ICONS     = ('Icons',             2, 767845253847449640)
-    TRICKCORD = ("Trick'cord Treat",  3, 767845285480366080)
-    RPI       = ('RPI',               4, 767845277003415612)
-    MEMES     = ('Memes',             5, 767845271551737901)
-    GAMING    = ('Variety Gaming',    6, 767845287800078356)
-    SMASH     = ('Super Smash Bros.', 7, 767845280607109160)
-    TESTSET   = ('Testing',           0, 767845280607109160)
+    MEMBERS   = ('Members',           1, 769742920009252864, '<:MEMBERS:769742719165661215>')
+    ICONS     = ('Icons',             2, 767845253847449640, '<:ICONS:769740679285964810>')
+    TRICKCORD = ("Trick'cord Treat",  3, 767845285480366080, '<:TRICKCORD:769742193756733470>')
+    RPI       = ('RPI',               4, 767845277003415612, '<:RPI:769740679818510336>')
+    MEMES     = ('Memes',             5, 767845271551737901, '<:MEMES:769740679273775134>')
+    GAMING    = ('Variety Gaming',    6, 767845287800078356, '<:GAMING:769740678673465373>')
+    SMASH     = ('Super Smash Bros.', 7, 767845280607109160, '<:SMASH:769740679295270963>')
+    TESTSET   = ('Testing',           0, 767845280607109160, '')
 
-    def __init__(self, text, order, image_id):
+    def __init__(self, text, order, image_id, badge):
         self.text = text
         self.order = order
         self.image_id = image_id
+        self.badge = badge
 
 # class Type(Enum):
 #     TODO: Card types
