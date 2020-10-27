@@ -63,8 +63,30 @@ def query_rarity_map(card_ids):
     return dict(cards)
 
 def calculate_discard_offer(card_ids):
-    # TODO: Implement discard offer
-    return {cfg.Rarity.RARE: 2, cfg.Rarity.EPIC: 1}
+    result = {}
+
+    weights = {
+        'RARE': 3,
+        'EPIC': 18
+    }
+    cost = 3 / 4
+
+    rarities = query_rarity_map(card_ids)
+    get = lambda r: rarities.get(r, 0)
+    score = get(cfg.Rarity.COMMON) \
+            + weights['RARE'] * get(cfg.Rarity.RARE) \
+            + weights['EPIC'] * get(cfg.Rarity.EPIC)
+    score = score * cost
+
+    result[cfg.Rarity.EPIC] = int(score / weights['EPIC'])
+    score %= weights['EPIC']
+
+    result[cfg.Rarity.RARE] = int(score / weights['RARE'])
+    score %= weights['RARE']
+
+    result[cfg.Rarity.COMMON] = int(score)
+
+    return result
 
 
 class CleanException(Exception):

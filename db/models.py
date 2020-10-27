@@ -180,8 +180,8 @@ class Transaction(Model):
 
     @staticmethod
     def _get_discard_offer_field_text(offer):
-        if not offer: return "No cards offered."
-        return '\n'.join(f'• Random **{rarity.text}** x {count}' for rarity, count in offer.items())
+        if sum(offer.values()) <= 0: return "No cards offered."
+        return '\n'.join(f'• Random **{rarity.text}** x {count}' for rarity, count in offer.items() if count > 0)
 
     def get_embed(self, name_1, name_2, closed=False):
         embed = d.Embed()
@@ -197,13 +197,9 @@ class Transaction(Model):
                 embed.description = "__**How to Trade:**__\n" \
                     "• Offer one or more of your cards using **$trade [Card ID] [Amount]**.\n" \
                     "• Remove one or more cards you offered with **$untrade [Card ID] [Amount]**.\n" \
-                    "• When the trade looks good, accept it using **$accept**.\n" \
-                    "• Call **$cancel** to call the trade off.\n" \
-                    "Be sure to check your inventory while discarding! **$inventory** is disabled here to reduce clutter, but you can use it in #ccc-commands.\n" \
-                    "__**Trading with DisCard:**__\n" \
-                    "• For every 3 x Common/Rare cards you offer, DisCard will offer 1 x Random Rare/Epic card, respectively.\n" \
-                    "• For every 3 x Epic cards you offer, DisCard will offer 2 x Random Epic cards.\n" \
-                    "• For every 1 x Member card you offer, DisCard will offer 1 x Random Epic card."
+                    "• When the exchange looks good, accept it using **$accept**.\n" \
+                    "• Call **$cancel** to call the exchange off.\n" \
+                    "Be sure to check your inventory! **$inventory** is disabled here to reduce clutter, but you can use it in #ccc-commands.\n"
             else:
                 embed.description = "__**How to Trade:**__\n" \
                     "• Offer one or more of your cards using **$trade [Card ID] [Amount]**.\n" \

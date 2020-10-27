@@ -1,4 +1,4 @@
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 
 from . import *
 
