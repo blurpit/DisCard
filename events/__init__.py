@@ -120,7 +120,6 @@ class Question(Event):
     def check(self, guess):
         return bool(re.fullmatch(self.content['a'], guess, re.IGNORECASE))
 
-
 class Expression(Event):
     max_guesses = None
 
