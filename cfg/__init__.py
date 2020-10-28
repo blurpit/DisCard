@@ -33,6 +33,7 @@ config = dict(
     SPAWN_INTERVAL_VARIATION = 0.2, # Percent variation for delay between spawns
     SPAWN_MESSAGE_CHANCE = 1/15, # Chance to spawn card on each message
     SPAWN_MESSAGE_COOLDOWN = 60, # Minimum time (seconds) between random message spawns
+    SPAWN_MESSAGE_MAX_CONSECUTIVE = 5, # Maximum number of consecutive messages by the same user before cards no longer spawn
 
     SPAWN_EVENT_GAME_TIMES = [15], # EST times when card events should spawn
 
@@ -59,7 +60,20 @@ page_controls = {
 
 # Time since last random card spawn
 last_spawn = dt.datetime(1970, 1, 1)
+consecutive_messages = [0, 0]
 
 def set_config(key, value, cast):
     config[key] = cast(value)
     return value, cast
+
+def add_consecutive_message(user_id):
+    """ Adds 1 to the number of consecutive messages for this user, or sets it to 1 if """
+    if config['SPAWN_MESSAGE_MAX_CONSECUTIVE'] > 0:
+        if consecutive_messages[0] == user_id:
+            consecutive_messages[1] += 1
+        else:
+            consecutive_messages[0] = user_id
+            consecutive_messages[1] = 1
+    else:
+        # If max consecutive is 0 or None, disable the check
+        consecutive_messages[1] = 0

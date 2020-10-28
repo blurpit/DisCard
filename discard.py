@@ -114,11 +114,13 @@ async def on_command_error(ctx:Context, error):
 @client.event
 async def on_message(message:d.Message):
     if not message.author.bot and not isinstance(message.channel, d.DMChannel):
+        cfg.add_consecutive_message(message.author.id)
         if not message.clean_content.startswith(client.command_prefix) \
                 and message.channel.id not in cfg.config['SPAWN_EXCLUDE_CHANNELS'][message.guild.id] \
                 and message.channel.id not in cfg.config['TRADE_CHANNELS'][message.guild.id] \
                 and random.random() <= cfg.config['SPAWN_MESSAGE_CHANCE'] \
-                and dt.datetime.utcnow() > cfg.last_spawn + dt.timedelta(seconds=cfg.config['SPAWN_MESSAGE_COOLDOWN']):
+                and dt.datetime.utcnow() >= cfg.last_spawn + dt.timedelta(seconds=cfg.config['SPAWN_MESSAGE_COOLDOWN']) \
+                and cfg.consecutive_messages[1] <= cfg.config['SPAWN_MESSAGE_MAX_CONSECUTIVE']:
             await spawn(message.channel)
         await client.process_commands(message)
 
