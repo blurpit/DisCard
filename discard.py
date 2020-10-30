@@ -537,12 +537,13 @@ async def card_event_timer():
         if time is None:
             time = now.add(days=1).replace(hour=cfg.config['SPAWN_EVENT_GAME_TIMES'][0], minute=0, second=0, microsecond=0)
 
-        delay = (time - now).total_seconds() + 30 # Make sure its after the time so it doesn't spawn multiple times
+        delay = (time - now).total_seconds()
         await asyncio.sleep(delay)
 
         for guild in client.guilds:
             channel_id = random.choice(list(cfg.config['SPAWN_EVENT_GAME_CHANNELS'][guild.id]))
             await spawn_event(guild.get_channel(channel_id))
+        await asyncio.sleep(60)
 
 
 # --- Main --- #
