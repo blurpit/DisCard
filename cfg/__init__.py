@@ -4,6 +4,12 @@ import datetime as dt
 ADMINISTRATORS = {426246773162639361, 416127116573278208}
 
 config = dict(
+    ENABLED_GUILDS = {
+        # 687146032416555047, # Cool Cids Club
+        693124716176736386, # Dumping Grounds
+        768172182312058880  # Dumpster Fire
+    },
+
     COMMAND_CHANNELS = { # Channels where regular commands are allowed
         687146032416555047: {767452299236474910, 687146032416555057}, # ccc-commands, main-chat
         693124716176736386: {766730238193041438}, # Dumping Grounds

@@ -26,6 +26,12 @@ client.remove_command('help')  # Override help command
 
 # --- Command Checks --- #
 
+def enabled_guilds():
+    """ Only allow command in explicitly enabled guilds in the config """
+    async def predicate(ctx):
+        return ctx.guild and ctx.guild.id in cfg.config['ENABLED_GUILDS']
+    return commands.check(predicate)
+
 def admin_command():
     """ Debug command, only available to admins """
     async def predicate(ctx):
@@ -113,7 +119,9 @@ async def on_command_error(ctx:Context, error):
 
 @client.event
 async def on_message(message:d.Message):
-    if not message.author.bot and not isinstance(message.channel, d.DMChannel):
+    if not message.author.bot and not isinstance(message.channel, d.DMChannel) \
+            and message.guild.id in cfg.config['ENABLED_GUILDS']:
+
         cfg.add_consecutive_message(message.author.id)
         if not message.clean_content.startswith(client.command_prefix) \
                 and message.channel.id not in cfg.config['SPAWN_EXCLUDE_CHANNELS'][message.guild.id] \
@@ -122,11 +130,14 @@ async def on_message(message:d.Message):
                 and dt.datetime.utcnow() >= cfg.last_spawn + dt.timedelta(seconds=cfg.config['SPAWN_MESSAGE_COOLDOWN']) \
                 and cfg.consecutive_messages[1] <= cfg.config['SPAWN_MESSAGE_MAX_CONSECUTIVE']:
             await spawn(message.channel)
+
         await client.process_commands(message)
 
 @client.event
 async def on_reaction_add(reaction:d.Reaction, user:d.Member):
-    if not user.bot and reaction.message.author == client.user and not isinstance(reaction.message.channel, d.DMChannel):
+    if not user.bot and reaction.message.author == client.user \
+            and not isinstance(reaction.message.channel, d.DMChannel) \
+            and reaction.message.guild.id in cfg.config['ENABLED_GUILDS']:
 
         title = reaction.message.embeds[0].title
         if reaction.emoji in cfg.page_controls.values():
@@ -144,6 +155,7 @@ async def on_reaction_add(reaction:d.Reaction, user:d.Member):
 # --- Help --- #
 
 @client.command()
+@enabled_guilds()
 async def help(ctx:Context):
     embed = d.Embed()
     embed.set_author(name=cfg.config['EMBED_AUTHOR'])
@@ -161,6 +173,7 @@ async def help(ctx:Context):
 
 @client.command()
 @admin_command()
+@enabled_guilds()
 async def ping(ctx:Context):
     await ctx.send('Pong!')
 
@@ -179,6 +192,7 @@ async def config(ctx:Context, key=None, value=None, cast='str'):
 
 @client.command()
 @admin_command()
+@enabled_guilds()
 async def enable(ctx:Context, channel:d.TextChannel, option:str):
     if option == 'commands':
         cfg.config['COMMAND_CHANNELS'][ctx.guild.id].add(channel.id)
@@ -192,6 +206,7 @@ async def enable(ctx:Context, channel:d.TextChannel, option:str):
 
 @client.command()
 @admin_command()
+@enabled_guilds()
 async def disable(ctx:Context, channel:d.TextChannel, option:str):
     if option == 'commands':
         cfg.config['COMMAND_CHANNELS'][ctx.guild.id].discard(channel.id)
@@ -205,6 +220,7 @@ async def disable(ctx:Context, channel:d.TextChannel, option:str):
 
 @client.command()
 @admin_command()
+@enabled_guilds()
 async def spawn(ctx:d.abc.Messageable, card:Union[int, str]=None):
     definition = db.spawner.get_definition(card)
     if definition:
@@ -214,6 +230,7 @@ async def spawn(ctx:d.abc.Messageable, card:Union[int, str]=None):
 
 @client.command()
 @admin_command()
+@enabled_guilds()
 async def spawn_event(ctx:d.abc.Messageable):
     event = events.create()
 
@@ -222,6 +239,7 @@ async def spawn_event(ctx:d.abc.Messageable):
 
 @client.command()
 @admin_command()
+@enabled_guilds()
 async def give(ctx:Context, recipient:d.Member, card_id:int):
     card = db.Inventory(ctx.author.id, ctx.guild.id)[card_id]
     if card is None:
@@ -235,6 +253,7 @@ async def give(ctx:Context, recipient:d.Member, card_id:int):
 # --- Card Claiming --- #
 
 @client.command()
+@enabled_guilds()
 async def claim(ctx:Context):
     card = db.spawner.claim(ctx.author.id, ctx.channel.id, ctx.guild.id)
     if card is None:
@@ -259,6 +278,7 @@ async def claim(ctx:Context):
 # --- Events --- #
 
 @client.command(aliases=['guess'])
+@enabled_guilds()
 async def answer(ctx:Context, *, guess:str=None):
     event = events.current(ctx.guild.id)
     if event:
@@ -268,6 +288,7 @@ async def answer(ctx:Context, *, guess:str=None):
 # --- Inventory, Dex, Leaderboard --- #
 
 @client.command(aliases=['inv'])
+@enabled_guilds()
 @command_channel()
 async def inventory(ctx:Context):
     inv = db.Inventory(ctx.author.id, ctx.guild.id)
@@ -279,6 +300,7 @@ async def inventory_page_turn(message, user, page, max_page):
     await message.edit(content=user.mention, embed=inv.get_embed(user.display_name, page))
 
 @client.command(aliases=['show', 'preview'])
+@enabled_guilds()
 @command_channel()
 async def view(ctx:Context, card:Union[int, str]):
     inv = db.Inventory(ctx.author.id, ctx.guild.id)
@@ -291,6 +313,7 @@ async def view(ctx:Context, card:Union[int, str]):
         await ctx.send("You don't have that card in your collection.")
 
 @client.command(aliases=['deck', 'cardeck', 'carddeck', 'cardex', 'carddex'])
+@enabled_guilds()
 @command_channel()
 async def dex(ctx:Context):
     dex = db.CardDex(ctx.author.id, ctx.guild.id)
@@ -302,6 +325,7 @@ async def cardex_page_turn(message, user, page, max_page):
     await message.edit(content=user.mention, embed=dex.get_embed(user.display_name, page))
 
 @client.command(aliases=['lb', 'leaderboards', 'scoreboard'])
+@enabled_guilds()
 @command_channel()
 async def leaderboard(ctx:Context):
     lb = db.Leaderboard(db.Leaderboard.WEIGHTED, ctx.guild.id)
@@ -323,6 +347,7 @@ async def leaderboard_toggle(message):
 # --- Trading & Discarding --- #
 
 @client.command()
+@enabled_guilds()
 @trade_channels()
 async def trade(ctx:Context, action:Union[d.Member, int, str, None]=None, amount:Union[int, str]=1):
     await ctx.message.delete(delay=1)
@@ -397,6 +422,7 @@ async def trade_add(ctx:Context, transaction:db.Transaction, card:Union[int, str
         return True
 
 @client.command()
+@enabled_guilds()
 @trade_channels()
 async def add(ctx:Context, card:Union[int, str], amount:Union[int, str]=1):
     await ctx.message.delete(delay=1)
@@ -404,6 +430,7 @@ async def add(ctx:Context, card:Union[int, str], amount:Union[int, str]=1):
     await trade_add(ctx, transaction, card, amount=amount)
 
 @client.command(aliases=['remove'])
+@enabled_guilds()
 @trade_channels()
 async def untrade(ctx:Context, card:Union[int, str], amount:Union[int, str]=1):
     await ctx.message.delete(delay=1)
@@ -423,6 +450,7 @@ async def untrade(ctx:Context, card:Union[int, str], amount:Union[int, str]=1):
         await update_trade(ctx, transaction)
 
 @client.command()
+@enabled_guilds()
 @trade_channels()
 async def accept(ctx:Context):
     await ctx.message.delete(delay=1)
@@ -443,6 +471,7 @@ async def accept(ctx:Context):
     await update_trade(ctx, transaction)
 
 @client.command()
+@enabled_guilds()
 @trade_channels()
 async def unaccept(ctx:Context):
     await ctx.message.delete(delay=1)
@@ -455,6 +484,7 @@ async def unaccept(ctx:Context):
     await update_trade(ctx, transaction)
 
 @client.command(aliases=['close'])
+@enabled_guilds()
 @trade_channels()
 async def cancel(ctx:Context):
     await ctx.message.delete(delay=1)
@@ -469,6 +499,7 @@ async def cancel(ctx:Context):
         raise util.NoActiveTrade()
 
 @client.command(aliases=['exc', 'exchange'])
+@enabled_guilds()
 @trade_channels()
 async def discard(ctx:Context, card:Union[int, str]=None, amount:Union[int, str]=1):
     await ctx.send("Exchanging cards is coming soon. Stay tuned!")
@@ -523,7 +554,8 @@ async def card_spawn_timer():
         await asyncio.sleep(delay)
 
         for guild in client.guilds:
-            await spawn(get_random_spawnable_channel(guild))
+            if guild.id in cfg.config['ENABLED_GUILDS']:
+                await spawn(get_random_spawnable_channel(guild))
 
 async def card_event_timer():
     await client.wait_until_ready()
@@ -541,8 +573,9 @@ async def card_event_timer():
         await asyncio.sleep(delay)
 
         for guild in client.guilds:
-            channel_id = random.choice(list(cfg.config['SPAWN_EVENT_GAME_CHANNELS'][guild.id]))
-            await spawn_event(guild.get_channel(channel_id))
+            if guild.id in cfg.config['ENABLED_GUILDS']:
+                channel_id = random.choice(list(cfg.config['SPAWN_EVENT_GAME_CHANNELS'][guild.id]))
+                await spawn_event(guild.get_channel(channel_id))
         await asyncio.sleep(60)
 
 
