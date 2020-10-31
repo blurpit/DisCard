@@ -48,6 +48,7 @@ def create_card_instance(definition, message_id, channel_id, guild_id, owner_id=
         card_id=definition.id,
         owner_ids=owner_id,
         spawn_timestamp=dt.datetime.utcnow(),
+        claim_timestamp=None if not owner_id else dt.datetime(1970, 1, 1),
         message_id=message_id,
         channel_id=channel_id,
         guild_id=guild_id
