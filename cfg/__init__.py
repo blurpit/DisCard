@@ -5,13 +5,13 @@ ADMINISTRATORS = {426246773162639361, 416127116573278208}
 
 config = dict(
     ENABLED_GUILDS = {
-        # 687146032416555047, # Cool Cids Club
-        693124716176736386, # Dumping Grounds
-        768172182312058880  # Dumpster Fire
+        687146032416555047, # Cool Cids Club
+        # 693124716176736386, # Dumping Grounds
+        # 768172182312058880  # Dumpster Fire
     },
 
     COMMAND_CHANNELS = { # Channels where regular commands are allowed
-        687146032416555047: {767452299236474910, 687146032416555057}, # ccc-commands, main-chat
+        687146032416555047: {767452299236474910}, # ccc-commands, main-chat
         693124716176736386: {766730238193041438}, # Dumping Grounds
         768172182312058880: {768172182312058884} # Dumpster Fire
     },
@@ -21,7 +21,8 @@ config = dict(
         768172182312058880: {768203474214191104} # Dumpster Fire
     },
     SPAWN_EXCLUDE_CHANNELS = { # Which channels cards should NOT be able to spawn in
-        687146032416555047: {768193489585963048, 701264348860907582, 700426514436587541, 691763308059164722}, # ccc-feedback, spam, nsfw, secreter-bot-testing
+        # ccc-commands, ccc-feedback, spam, nsfw, secret-mod-chat, secreter-bot-testing
+        687146032416555047: {767452299236474910, 768193489585963048, 701264348860907582, 700426514436587541, 687165310054432805, 691763308059164722},
         693124716176736386: {767822158294286387, 767855584560939029}, # Dumping Grounds
         768172182312058880: set() # Dumpster Fire
     },
@@ -34,16 +35,16 @@ config = dict(
     CLAIM_COOLDOWN = 5*60, # Cooldown (seconds) between allowed card claims
 
     SPAWN_INTERVAL = 37.5*60, # Time (seconds) between card spawns (0 to disable)
+    SPAWN_INTERVAL_VARIATION=0.2,  # Percent variation for delay between spawns
     SPAWN_INTERVAL_START_TIME = 9, # EST time for when cards can start spawning
     SPAWN_INTERVAL_END_TIME = 23, # EST time for when cards stop spawning
-    SPAWN_INTERVAL_VARIATION = 0.2, # Percent variation for delay between spawns
     SPAWN_MESSAGE_CHANCE = 1/15, # Chance to spawn card on each message
     SPAWN_MESSAGE_COOLDOWN = 60, # Minimum time (seconds) between random message spawns
     SPAWN_MESSAGE_MAX_CONSECUTIVE = 5, # Maximum number of consecutive messages by the same user before cards no longer spawn
 
     SPAWN_EVENT_GAME_TIMES = [15], # EST times when card events should spawn
 
-    SPAWN_EVENT_CARD_RATE = 1/4, # Chance to spawn an Event rarity card instead of regular cards
+    SPAWN_EVENT_CARD_RATE = 1/5, # Chance to spawn an Event rarity card instead of regular cards
     ENABLED_EVENT_CARD_SETS = set(), # Which sets should spawn Event cards
 
     ITEMS_PER_PAGE = 15, # Number of items that appear before wrapping to the next page

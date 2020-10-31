@@ -69,7 +69,7 @@ class Event:
         await ctx.message.add_reaction(cfg.emoji['check'])
 
         card_set = cfg.Set[self.data['set']]
-        rarity = random.choices(list(cfg.Rarity), weights=[r.event_weight for r in cfg.Rarity])[0]
+        rarity = random.choices(list(cfg.Rarity), weights=[r.event_chance for r in cfg.Rarity])[0]
         definition = db.spawner.get_random_definition(card_set=card_set, rarity=rarity)
 
         embed = definition.get_embed(preview=True)
