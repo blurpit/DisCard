@@ -26,7 +26,8 @@ def get_definition(guild_id, card=None):
             pool = rarity.pool
             if used.get(definition.id, 0) > 0:
                 pool = max(0, pool - used[definition.id])
-            pools[rarity][definition.id] = (pool, definition)
+            if pool > 0:
+                pools[rarity][definition.id] = (pool, definition)
 
         if any(any(pools[r][card][0] > 0 for card in pools[r]) for r in pools):
             r = random.choices(list(pools.keys()), weights=[r.chance for r in pools])[0]
