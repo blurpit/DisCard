@@ -6,27 +6,29 @@ from sqlalchemy import func, or_
 from . import *
 
 
-def get_definition(card=None):
+def get_definition(guild_id, card=None):
     if card is None:
         if cfg.config['ENABLED_EVENT_CARD_SETS'] and random.random() < cfg.config['SPAWN_EVENT_CARD_RATE']:
             return get_random_definition(rarity=cfg.Rarity.EVENT)
 
-        pools = {}
-        q = session.query(CardDefinition, func.count()) \
+        pools = {r: {} for r in cfg.Rarity}
+        used = dict(session.query(Card.card_id, func.count()) \
             .select_from(Card).join(CardDefinition) \
             .filter(CardDefinition.rarity != cfg.Rarity.EVENT) \
+            .filter(Card.guild_id == guild_id) \
             .group_by(CardDefinition.id) \
-            .order_by(CardDefinition.id)
+            .order_by(CardDefinition.id) \
+            .all())
+        definitions = session.query(CardDefinition).all()
 
-        for definition, count in q.all():
+        for definition in definitions:
             rarity = definition.rarity
-            pool = rarity.pool - count
-            if pool > 0:
-                if rarity not in pools:
-                    pools[rarity] = {}
-                pools[rarity][definition.id] = (pool, definition)
+            pool = rarity.pool
+            if used.get(definition.id, 0) > 0:
+                pool = max(0, pool - used[definition.id])
+            pools[rarity][definition.id] = (pool, definition)
 
-        if pools:
+        if any(any(pools[r][card][0] > 0 for card in pools[r]) for r in pools):
             r = random.choices(list(pools.keys()), weights=[r.chance for r in pools])[0]
             return random.choice(list(pools[r].values()))[1]
     else:

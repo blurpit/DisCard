@@ -179,6 +179,13 @@ async def ping(ctx:Context):
 
 @client.command()
 @admin_command()
+async def kill(ctx:Context):
+    await ctx.send('Goodbye...')
+    print('Killing...')
+    await client.close()
+
+@client.command()
+@admin_command()
 async def config(ctx:Context, key=None, value=None, cast='str'):
     if key is None:
         await ctx.send("Available Config Options:```\n• " + '\n• '.join(cfg.config.keys()) + '```')
@@ -221,8 +228,8 @@ async def disable(ctx:Context, channel:d.TextChannel, option:str):
 @client.command()
 @admin_command()
 @enabled_guilds()
-async def spawn(ctx:d.abc.Messageable, card:Union[int, str]=None):
-    definition = db.spawner.get_definition(card)
+async def spawn(ctx, card:Union[int, str]=None):
+    definition = db.spawner.get_definition(ctx.guild.id, card)
     if definition:
         msg = await ctx.send(embed=definition.get_embed())
         db.spawner.create_card_instance(definition, msg.id, msg.channel.id, msg.guild.id)
