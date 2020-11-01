@@ -39,7 +39,7 @@ class Event:
 
     def generate(self):
         self.data['type'] = self.__class__.__name__
-        self.data['set'] = random.choice([s for s in cfg.Set if s not in (cfg.Set.MEMBERS, cfg.Set.TESTSET)]).name
+        self.data['set'] = random.choice([s for s in cfg.Set if s != cfg.Set.MEMBERS]).name
         self.data['guesses'] = {}
 
     async def on_message(self, message:d.Message):
