@@ -559,8 +559,11 @@ async def card_event_timer():
     while not client.is_closed():
         now = pendulum.now('US/Eastern')
 
-        time = now.add(days=1).replace(hour=cfg.config['SPAWN_INTERVAL_START_TIME'], minute=0, second=0, microsecond=0)
-        sec_range = (cfg.config['SPAWN_INTERVAL_END_TIME'] - cfg.config['SPAWN_INTERVAL_START_TIME']) * 60*60
+        start, end = cfg.config['SPAWN_INTERVAL_START_TIME'], cfg.config['SPAWN_INTERVAL_END_TIME']
+        time = now.replace(hour=start, minute=0, second=0, microsecond=0)
+        if time < now:
+            time = time.add(days=1)
+        sec_range = (end - start) * 60*60
         time = time.add(seconds=random.randrange(0, sec_range))
 
         delay = (time - now).total_seconds()
