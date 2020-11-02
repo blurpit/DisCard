@@ -557,13 +557,10 @@ async def card_event_timer():
     await client.wait_until_ready()
     while not client.is_closed():
         now = pendulum.now('US/Eastern')
-        time = None
-        for hour in cfg.config['SPAWN_EVENT_GAME_TIMES']:
-            if hour > now.hour:
-                time = now.replace(hour=hour, minute=0, second=0, microsecond=0)
-                break
-        if time is None:
-            time = now.add(days=1).replace(hour=cfg.config['SPAWN_EVENT_GAME_TIMES'][0], minute=0, second=0, microsecond=0)
+
+        time = now.add(days=1).replace(hour=cfg.config['SPAWN_INTERVAL_START_TIME'], minute=0, second=0, microsecond=0)
+        sec_range = (cfg.config['SPAWN_INTERVAL_END_TIME'] - cfg.config['SPAWN_INTERVAL_START_TIME']) * 60*60
+        time = time.add(seconds=random.randrange(0, sec_range))
 
         delay = (time - now).total_seconds()
         await asyncio.sleep(delay)

@@ -45,8 +45,6 @@ config = dict(
     SPAWN_MESSAGE_COOLDOWN = 60, # Minimum time (seconds) between random message spawns
     SPAWN_MESSAGE_MAX_CONSECUTIVE = 5, # Maximum number of consecutive messages by the same user before cards no longer spawn
 
-    SPAWN_EVENT_GAME_TIMES = [15], # EST times when card events should spawn
-
     SPAWN_EVENT_CARD_RATE = 1/5, # Chance to spawn an Event rarity card instead of regular cards
     ENABLED_EVENT_CARD_SETS = set(), # Which sets should spawn Event cards
 
