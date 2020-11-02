@@ -2,10 +2,10 @@ from enum import Enum
 
 
 class Rarity(Enum):
-    COMMON = ('Common', 4, 0.65, 1,  0,    20, 0xb86800)
-    RARE   = ('Rare',   3, 0.25, 5,  0.75, 15, 0xffd900)
+    COMMON = ('Common', 4, 0.75, 1,  0,    20, 0xb86800)
+    RARE   = ('Rare',   3, 0.18, 5,  0.75, 15, 0xffd900)
     EPIC   = ('Epic',   1, 0.05, 20, 0.25, 5,  0xba24ff)
-    MEMBER = ('Member', 0, 0.05, 25, 0,    1,  0xff2b24)
+    MEMBER = ('Member', 0, 0.02, 25, 0,    1,  0xff2b24)
     EVENT  = ('Event',  2, 0,    15, 0,    0,  0x00e8f0)
 
     def __init__(self, text, order, chance, weight, event_chance, pool, color):

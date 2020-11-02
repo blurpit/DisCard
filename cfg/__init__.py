@@ -11,7 +11,7 @@ config = dict(
     },
 
     COMMAND_CHANNELS = { # Channels where regular commands are allowed
-        687146032416555047: {767452299236474910}, # ccc-commands, main-chat
+        687146032416555047: {767452299236474910}, # ccc-commands
         693124716176736386: {766730238193041438}, # Dumping Grounds
         768172182312058880: {768172182312058884} # Dumpster Fire
     },
@@ -21,8 +21,11 @@ config = dict(
         768172182312058880: {768203474214191104} # Dumpster Fire
     },
     SPAWN_EXCLUDE_CHANNELS = { # Which channels cards should NOT be able to spawn in
-        # ccc-commands, ccc-feedback, spam, nsfw, secret-mod-chat, secreter-bot-testing
-        687146032416555047: {767452299236474910, 768193489585963048, 701264348860907582, 700426514436587541, 687165310054432805, 691763308059164722},
+        # ccc-commands, ccc-feedback, spam, nsfw, talk-to-bots, secret-mod-chat, secreter-bot-testing, hw-help, cs-hw-help, career-prep
+        687146032416555047: {767452299236474910, 768193489585963048, 772548035616047110,
+                             701264348860907582, 693670292697907230, 700426514436587541,
+                             687165310054432805, 691763308059164722, 753294182994411540,
+                             753294145979809952, 753294224715284561},
         693124716176736386: {767822158294286387, 767855584560939029}, # Dumping Grounds
         768172182312058880: set() # Dumpster Fire
     },
