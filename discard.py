@@ -178,6 +178,21 @@ async def kill(ctx:Context):
 
 @client.command()
 @admin_command()
+async def sql(ctx:Context, *, clause:str):
+    response = db.session.execute(clause)
+    if response.returns_rows:
+        content = '\n'.join(', '.join(map(str, row)) for row in response)
+        if not content:
+            content = 'No results'
+        elif len(content) > 1991:
+            content = content[:1991] + '...'
+        await ctx.send('```' + content + '```')
+    else:
+        db.session.commit()
+        await ctx.send('Successfully updated.')
+
+@client.command()
+@admin_command()
 async def config(ctx:Context, key=None, value=None, cast='str'):
     if key is None:
         await ctx.send("Available Config Options:```\n• " + '\n• '.join(cfg.config.keys()) + '```')
