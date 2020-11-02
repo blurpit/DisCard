@@ -92,7 +92,7 @@ async def on_ready():
 
     if cfg.config['SPAWN_INTERVAL'] > 0:
         client.loop.create_task(card_spawn_timer())
-    if cfg.config['SPAWN_EVENT_GAME_TIMES']:
+    if cfg.config['SPAWN_INTERVAL_END_TIME'] - cfg.config['SPAWN_INTERVAL_START_TIME'] > 0:
         client.loop.create_task(card_event_timer())
 
 @client.event
@@ -541,17 +541,18 @@ async def card_spawn_timer():
         now = pendulum.now('US/Eastern')
         time = now.add(seconds=delay)
         start, end = cfg.config['SPAWN_INTERVAL_START_TIME'], cfg.config['SPAWN_INTERVAL_END_TIME']
-        if not start < time.hour < end:
+        if not start <= time.hour <= end:
             time = time.set(hour=start, minute=0, second=0, microsecond=0)
             if not time > now:
                 time = time.add(days=1)
-            delay = (time - now).total_seconds()
+            delay += (time - now).total_seconds()
 
         await asyncio.sleep(delay)
 
         for guild in client.guilds:
             if guild.id in cfg.config['ENABLED_GUILDS']:
                 await spawn(get_random_spawnable_channel(guild))
+        await asyncio.sleep(60)
 
 async def card_event_timer():
     await client.wait_until_ready()
