@@ -273,11 +273,7 @@ async def claim(ctx:Context):
     if card is None:
         # No claimable cards
         await ctx.message.add_reaction(cfg.emoji['x'])
-    elif isinstance(card, dt.timedelta):
-        # Claim is on cooldown
-        total = cfg.config['CLAIM_COOLDOWN'] - card.total_seconds()
-        await ctx.send("Claim cooldown: **{:d}m {:d}s**".format(int(total//60), int(total%60)))
-    elif isinstance(card, db.Card):
+    else:
         # Claim successful
         try:
             msg = await ctx.channel.fetch_message(card.message_id)
