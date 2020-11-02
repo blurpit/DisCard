@@ -32,7 +32,7 @@ def query_card_amount(user_id, guild_id, card, amount, exclude=()):
         .join(db.CardDefinition) \
         .filter(db.Card.guild_id == guild_id) \
         .filter(db.Card.owner_ids.endswith(str(user_id))) \
-        .filter(or_(db.Card.card_id == card, db.CardDefinition.name == card)) \
+        .filter(or_(db.Card.card_id == card, func.lower(db.CardDefinition.name) == func.lower(card))) \
         .filter(db.Card.id.notin_(exclude)) \
         .order_by(db.Card.claim_timestamp.desc()) \
         .limit(amount if amount != 'all' else None) \
@@ -40,8 +40,10 @@ def query_card_amount(user_id, guild_id, card, amount, exclude=()):
 
 def query_cards(card_ids, card_filter=None):
     q = db.session.query(db.Card).filter(db.Card.id.in_(card_ids))
-    if isinstance(card_filter, int): q = q.filter_by(card_id=card_filter)
-    elif isinstance(card_filter, str): q = q.join(db.CardDefinition).filter(db.CardDefinition.name == card_filter)
+    if isinstance(card_filter, int):
+        q = q.filter_by(card_id=card_filter)
+    elif isinstance(card_filter, str):
+        q = q.join(db.CardDefinition).filter(func.lower(db.CardDefinition.name) == func.lower(card_filter))
     return q.all()
 
 def query_card_map(card_ids):
