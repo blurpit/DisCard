@@ -423,7 +423,7 @@ async def trade_add(ctx:Context, transaction:db.Transaction, card:Union[int, str
         await update_trade(ctx, transaction)
         return True
 
-@client.command()
+@client.command(aliases=['offer'])
 @trade_channels()
 async def add(ctx:Context, card:Union[int, str], amount:Union[int, str]=1):
     await ctx.message.delete(delay=1)
