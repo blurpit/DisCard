@@ -21,11 +21,12 @@ config = dict(
         768172182312058880: {768203474214191104} # Dumpster Fire
     },
     SPAWN_EXCLUDE_CHANNELS = { # Which channels cards should NOT be able to spawn in
-        # ccc-commands, ccc-feedback, spam, nsfw, talk-to-bots, secret-mod-chat, secreter-bot-testing, hw-help, cs-hw-help, career-prep
+        # ccc-commands, ccc-feedback, spam, nsfw, talk-to-bots, secret-mod-chat, secreter-bot-testing,
+        # hw-help, cs-hw-help, career-prep, small-brain-voice-chat
         687146032416555047: {767452299236474910, 768193489585963048, 772548035616047110,
                              701264348860907582, 693670292697907230, 700426514436587541,
                              687165310054432805, 691763308059164722, 753294182994411540,
-                             753294145979809952, 753294224715284561},
+                             753294145979809952, 753294224715284561, 753294360149360752},
         693124716176736386: {767822158294286387, 767855584560939029}, # Dumping Grounds
         768172182312058880: set() # Dumpster Fire
     },
@@ -43,8 +44,8 @@ config = dict(
     SPAWN_INTERVAL_VARIATION=0.2,  # Percent variation for delay between spawns
     SPAWN_INTERVAL_START_TIME = 9, # EST time for when cards can start spawning
     SPAWN_INTERVAL_END_TIME = 23, # EST time for when cards stop spawning
-    SPAWN_MESSAGE_CHANCE = 1/15, # Chance to spawn card on each message
-    SPAWN_MESSAGE_COOLDOWN = 60, # Minimum time (seconds) between random message spawns
+    SPAWN_MESSAGE_CHANCE = 1/30, # Chance to spawn card on each message
+    SPAWN_MESSAGE_COOLDOWN = 5*60, # Minimum time (seconds) between random message spawns
     SPAWN_MESSAGE_MAX_CONSECUTIVE = 5, # Maximum number of consecutive messages by the same user before cards no longer spawn
 
     SPAWN_EVENT_CARD_RATE = 1/5, # Chance to spawn an Event rarity card instead of regular cards
