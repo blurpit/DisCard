@@ -278,11 +278,10 @@ async def claim(ctx:Context):
         try:
             msg = await ctx.channel.fetch_message(card.message_id)
         except d.NotFound:
-            db.spawner.delete_card_instance(card)
-            await claim(ctx) # Claim the next available card
+            await ctx.send(embed=card.get_embed(ctx))
         else:
             await msg.edit(embed=card.get_embed(ctx))
-            await ctx.message.add_reaction(cfg.emoji['check'])
+        await ctx.message.add_reaction(cfg.emoji['check'])
 
 
 # --- Events --- #
