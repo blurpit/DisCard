@@ -253,6 +253,12 @@ async def spawn_event(ctx:d.abc.Messageable):
     msg = await ctx.send(**event.generate())
     await event.on_message(msg)
 
+@client.command()
+@admin_command()
+async def testview(ctx:Context, card:Union[int, str]):
+    card = db.spawner.get_definition(ctx.guild.id, card)
+    await ctx.send(embed=card.get_embed(preview=True))
+
 
 # --- Card Claiming --- #
 
