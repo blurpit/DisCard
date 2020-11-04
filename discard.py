@@ -20,7 +20,7 @@ import util
 
 intents = d.Intents.default()
 intents.members = True
-client = Bot(command_prefix='$', intents=intents)
+client = Bot(command_prefix='$', intents=intents, case_insensitive=True)
 client.remove_command('help')  # Override help command
 
 
