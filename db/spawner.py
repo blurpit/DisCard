@@ -91,7 +91,7 @@ def claim(user_id, channel_id, guild_id):
             remaining = cfg.config['CLAIM_COOLDOWN'] - latest
             raise util.CleanException('Claim cooldown: **{:d}m {:d}s**'
                                       .format(int(remaining // 60), int(remaining % 60)))
-        if oldest < cfg.config['CLAIM_LIMIT_PERIOD']:
+        if len(claims) >= cfg.config['CLAIM_LIMIT'] and oldest < cfg.config['CLAIM_LIMIT_PERIOD']:
             remaining = cfg.config['CLAIM_LIMIT_PERIOD'] - oldest
             raise util.CleanException('Claim limit reached! You can claim again in: **{:d}h {:d}m {:d}s**'
                                       .format(int(remaining // 3600), int(remaining // 60 % 60), int(remaining % 60)))
