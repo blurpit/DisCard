@@ -253,17 +253,6 @@ async def spawn_event(ctx:d.abc.Messageable):
     msg = await ctx.send(**event.generate())
     await event.on_message(msg)
 
-@client.command()
-@admin_command()
-async def give(ctx:Context, recipient:d.Member, card_id:int):
-    card = db.Inventory(ctx.author.id, ctx.guild.id)[card_id]
-    if card is None:
-        await ctx.send("You don't have that card in your collection.")
-    else:
-        card.owner_id = recipient.id
-        db.session.commit()
-        await ctx.send(f"Gave {card.definition.string()} to **{recipient.display_name}**.")
-
 
 # --- Card Claiming --- #
 
