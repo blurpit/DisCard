@@ -13,5 +13,5 @@
     {"q": "How many songs are in the original soundtrack for the source material of card #103?", "a": "101|one hundred (and )?one"},
     {"q": "Type out every Star Wars character.", "a": "(out )?every star wars character\\.?"},
     {"q": "Card #243 works where?", "a": "sora( ltd\\.?)?"},
-    {"q": "What year was card #79 available?", "a": "2009"}
+    {"q": "What year was card #79 available?", "a": "2008"}
 ]
