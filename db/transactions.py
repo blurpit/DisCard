@@ -37,10 +37,12 @@ def set_transaction_accepted(transaction:Transaction, user_id, accepted):
     session.commit()
 
 def execute(transaction:Transaction):
-    if not (transaction.cards_1 and transaction.cards_2): return
+    if not (transaction.cards_1 or transaction.cards_2): return
 
-    for card in util.query_cards(transaction.card_set(1)):
-        card.owner_ids += ';' + str(transaction.user_2)
-    for card in util.query_cards(transaction.card_set(2)):
-        card.owner_ids += ';' + str(transaction.user_1)
+    if transaction.cards_1:
+        for card in util.query_cards(transaction.card_set(1)):
+            card.owner_ids += ';' + str(transaction.user_2)
+    if transaction.cards_2:
+        for card in util.query_cards(transaction.card_set(2)):
+            card.owner_ids += ';' + str(transaction.user_1)
     session.commit()
