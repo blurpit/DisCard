@@ -16,9 +16,9 @@ class CardDefinition(Model):
 
     id = Column(Integer, primary_key=True)
     name = Column(Text, nullable=False)
-    rarity = Column(Enum(cfg.Rarity), nullable=False)
-    set = Column(Enum(cfg.Set), nullable=False)
-    expansion = Column(Enum(cfg.Expansion), nullable=False)
+    rarity = Column(Enum(cfg.Rarity, create_constraint=False), nullable=False)
+    set = Column(Enum(cfg.Set, create_constraint=False), nullable=False)
+    expansion = Column(Enum(cfg.Expansion, create_constraint=False), nullable=False)
     image_id = Column(Integer, nullable=True)
     description = Column(Text, nullable=False)
     # type = Column(Enum(cfg.CardType), nullable=False)
