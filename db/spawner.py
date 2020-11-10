@@ -15,6 +15,8 @@ def get_definition(guild_id, card=None):
         used = dict(session.query(Card.card_id, func.count()) \
             .select_from(Card).join(CardDefinition) \
             .filter(CardDefinition.rarity != cfg.Rarity.EVENT) \
+            .filter(Card.owner_ids != None) \
+            .filter(not_(Card.owner_ids.endswith(';0')))
             .filter(Card.guild_id == guild_id) \
             .group_by(CardDefinition.id) \
             .order_by(CardDefinition.id) \
