@@ -238,6 +238,20 @@ async def disable(ctx:Context, channel:d.TextChannel, option:str):
 
 @client.command()
 @admin_command()
+async def enable_event_set(ctx:Context, set_name:str):
+    s = cfg.Set[set_name.upper()]
+    cfg.config['ENABLED_EVENT_CARD_SETS'].add(s)
+    await ctx.send('Enabled event card spawning for **{} Set**.'.format(s.text))
+
+@client.command()
+@admin_command()
+async def disable_event_set(ctx:Context, set_name:str):
+    s = cfg.Set[set_name.upper()]
+    cfg.config['ENABLED_EVENT_CARD_SETS'].discard(s)
+    await ctx.send('Disabled event card spawning for **{} Set**.'.format(s.text))
+
+@client.command()
+@admin_command()
 async def spawn(ctx, card:Union[int, str]=None):
     definition = db.spawner.get_definition(ctx.guild.id, card)
     if definition:
