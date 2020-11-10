@@ -19,6 +19,7 @@ class Rarity(Enum):
 
 class Expansion(Enum):
     BASE = 'Base'
+    EX1  = 'Crucial Cards Collection'
 
     def __init__(self, text):
         self.text = text
@@ -31,6 +32,9 @@ class Set(Enum):
     MEMES     = ('Memes',             4, 767845271551737901, '<:MEMES:769740679273775134>')
     GAMING    = ('Variety Gaming',    5, 767845287800078356, '<:GAMING:769740678673465373>')
     SMASH     = ('Super Smash Bros.', 6, 767845280607109160, '<:SMASH:769740679295270963>')
+    SYSTEMS   = ('Game Systems',      7, 775857654118744115, '<:SYSTEMS:775861575889846333>')
+    SIMIAN    = ('Simian',            8, 775857676427984946, '<:SIMIAN:775862931552075797>')
+    GRADY     = ('Grady',             9, 775857721744031764, '<:GRADY:775861580977537074>')
 
     def __init__(self, text, order, image_id, badge):
         self.text = text
