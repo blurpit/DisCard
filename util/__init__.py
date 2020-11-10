@@ -69,9 +69,9 @@ def calculate_discard_offer(card_ids):
 
     weights = {
         'RARE': 3,
-        'EPIC': 18
+        'EPIC': 12
     }
-    cost = 3 / 4
+    cost = 1/3
 
     rarities = query_rarity_map(card_ids)
     get = lambda r: rarities.get(r, 0)
