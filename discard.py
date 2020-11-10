@@ -508,23 +508,22 @@ async def cancel(ctx:Context):
 @client.command(aliases=['exc', 'exchange'])
 @trade_channels()
 async def discard(ctx:Context, card:Union[int, str]=None, amount:Union[int, str]=1):
-    await ctx.send("Exchanging cards is coming soon. Stay tuned!")
-    # await ctx.message.delete(delay=1)
-    #
-    # transaction = db.transactions.get_active_transaction(ctx.author.id, ctx.guild.id)
-    # if not transaction:
-    #     transaction = db.transactions.open_transaction(ctx.author.id, 0, ctx.guild.id)
-    #     await update_trade(ctx, transaction)
-    # elif not transaction.is_party(0):
-    #     raise util.CleanException("You already have an active trade open. Please finish or cancel it before starting another one.")
-    #
-    # if card == 'resend':
-    #     if not transaction: raise util.NoActiveTrade()
-    #     await resend_trade(ctx, transaction)
-    #
-    # if card is not None:
-    #     if not await trade_add(ctx, transaction, card, amount):
-    #         raise util.NotInInventory(card)
+    await ctx.message.delete(delay=1)
+
+    transaction = db.transactions.get_active_transaction(ctx.author.id, ctx.guild.id)
+    if not transaction:
+        transaction = db.transactions.open_transaction(ctx.author.id, 0, ctx.guild.id)
+        await update_trade(ctx, transaction)
+    elif not transaction.is_party(0):
+        raise util.CleanException("You already have an active trade open. Please finish or cancel it before starting another one.")
+
+    if card == 'resend':
+        if not transaction: raise util.NoActiveTrade()
+        await resend_trade(ctx, transaction)
+
+    if card is not None:
+        if not await trade_add(ctx, transaction, card, amount):
+            raise util.NotInInventory(card)
 
 async def discard_accept(ctx:Context, transaction:db.Transaction):
     offer = util.calculate_discard_offer(transaction.card_set(1))
