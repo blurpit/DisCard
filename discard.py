@@ -49,16 +49,17 @@ def trade_channels():
 # --- Utility Functions --- #
 
 async def page_turn(message, reaction, func):
-    user = message.mentions[0]
-    current, max_page = map(lambda n: int(n)-1, message.embeds[0].footer.text[5:].split('/'))  # cut off "Page " and split the slash
+    page_text = message.embeds[0].footer.text.split('|')[0].strip()[5:] # "Page x/y | blah" -> "x/y"
+    current, max_page = map(lambda n: int(n)-1, page_text.split('/'))
 
     if reaction == cfg.page_controls['next']: page = util.clamp(current+1, 0, max_page)
     elif reaction == cfg.page_controls['prev']: page = util.clamp(current-1, 0, max_page)
     elif reaction == cfg.page_controls['first']: page = 0
     elif reaction == cfg.page_controls['last']: page = max_page
     else: page = current
+    if page == current: return
 
-    if current == page: return
+    user = message.mentions[0] if message.mentions else None
     await func(message, user, page, max_page)
 
 async def add_page_reactions(message, max_page):
@@ -139,6 +140,8 @@ async def on_reaction_add(reaction:d.Reaction, user:d.Member):
                 await page_turn(reaction.message, reaction.emoji, inventory_page_turn)
             elif 'CardDex' in title:
                 await page_turn(reaction.message, reaction.emoji, cardex_page_turn)
+            elif 'Leaderboard' in title:
+                await page_turn(reaction.message, reaction.emoji, leaderboard_page_turn)
         elif reaction.emoji == cfg.emoji['arrows_toggle']:
             if 'Leaderboard' in title:
                 await leaderboard_toggle(reaction.message)
