@@ -41,7 +41,7 @@ config = dict(
     CLAIM_LIMIT_PERIOD = 24*60*60, # Rolling time period (seconds) that the limit applies
 
     SPAWN_INTERVAL = 37.5*60, # Time (seconds) between card spawns (0 to disable)
-    SPAWN_INTERVAL_VARIATION=0.2,  # Percent variation for delay between spawns
+    SPAWN_INTERVAL_VARIATION = 0.2,  # Percent variation for delay between spawns
     SPAWN_INTERVAL_START_TIME = 9, # EST time for when cards can start spawning
     SPAWN_INTERVAL_END_TIME = 23, # EST time for when cards stop spawning
     SPAWN_MESSAGE_CHANCE = 1/30, # Chance to spawn card on each message
@@ -73,9 +73,15 @@ page_controls = {
 last_spawn = dt.datetime(1970, 1, 1)
 consecutive_messages = [0, 0]
 
-def set_config(key, value, cast):
-    config[key] = cast(value)
-    return value, cast
+def set_config(key, value):
+    try:
+        value = float(value)
+        if value % 1 == 0:
+            value = int(value)
+    except ValueError:
+        pass
+    config[key] = value
+    return value
 
 def add_consecutive_message(user_id):
     """ Adds 1 to the number of consecutive messages for this user, or sets it to 1 if """

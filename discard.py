@@ -3,7 +3,7 @@ import datetime as dt
 import random
 import traceback
 from operator import attrgetter
-from pydoc import locate
+from pprint import pformat
 from typing import Union
 
 import discord as d
@@ -202,16 +202,16 @@ async def sql(ctx:Context, *, clause:str):
 
 @client.command()
 @admin_command()
-async def config(ctx:Context, key=None, value=None, cast='str'):
+async def config(ctx:Context, key=None, value=None):
     if key is None:
         await ctx.send("Available Config Options:```\n• " + '\n• '.join(cfg.config.keys()) + '```')
     else:
         if value is None:
-            val = cfg.config[key]
-            await ctx.send(f"{key} = {val} {type(val)}")
+            value = cfg.config[key]
+            await ctx.send("```py\n{}\n{}```".format(pformat(value, indent=4, width=90, compact=True), type(value)))
         else:
-            value, typ = cfg.set_config(key, value, locate(cast))
-            await ctx.send(f"Set {key} = {value} {typ}")
+            value = cfg.set_config(key, value)
+            await ctx.send("Set `{} = {} {}`".format(key, value, type(value)))
 
 @client.command()
 @admin_command()

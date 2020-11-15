@@ -16,6 +16,8 @@ class Rarity(Enum):
         self.event_chance = event_chance
         self.pool = pool
         self.color = color
+    def __repr__(self):
+        return str(self)
 
 class Expansion(Enum):
     BASE = 'Base'
@@ -23,6 +25,8 @@ class Expansion(Enum):
 
     def __init__(self, text):
         self.text = text
+    def __repr__(self):
+        return str(self)
 
 class Set(Enum):
     MEMBERS   = ('Members',           0, 769742920009252864, '<:MEMBERS:769742719165661215>')
@@ -41,3 +45,5 @@ class Set(Enum):
         self.order = order
         self.image_id = image_id
         self.badge = badge
+    def __repr__(self):
+        return str(self)
