@@ -37,8 +37,6 @@ config = dict(
     },
 
     CLAIM_COOLDOWN = 5*60, # Cooldown (seconds) between allowed card claims
-    CLAIM_LIMIT = 20, # Number of cards someone can claim per rolling period
-    CLAIM_LIMIT_PERIOD = 24*60*60, # Rolling time period (seconds) that the limit applies
 
     SPAWN_INTERVAL = 37.5*60, # Time (seconds) between card spawns (0 to disable)
     SPAWN_INTERVAL_VARIATION = 0.2,  # Percent variation for delay between spawns

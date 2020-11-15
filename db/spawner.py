@@ -78,25 +78,18 @@ def claim(user_id, channel_id, guild_id):
     if not card:
         return None
 
-    claims = session.query(Card.claim_timestamp) \
+    latest_claim = session.query(Card.claim_timestamp) \
         .filter_by(guild_id=guild_id) \
         .filter(Card.owner_ids == str(user_id)) \
         .order_by(Card.claim_timestamp.desc()) \
-        .limit(cfg.config['CLAIM_LIMIT']) \
-        .all()
+        .first()
 
-    if claims:
+    if latest_claim:
         now = dt.datetime.utcnow()
-        latest = (now - claims[0][0]).total_seconds()
-        oldest = (now - claims[-1][0]).total_seconds()
-        if latest < cfg.config['CLAIM_COOLDOWN']:
-            remaining = cfg.config['CLAIM_COOLDOWN'] - latest
-            raise util.CleanException('Claim cooldown: **{:d}m {:d}s**'
-                                      .format(int(remaining // 60), int(remaining % 60)))
-        if len(claims) >= cfg.config['CLAIM_LIMIT'] and oldest < cfg.config['CLAIM_LIMIT_PERIOD']:
-            remaining = cfg.config['CLAIM_LIMIT_PERIOD'] - oldest
-            raise util.CleanException('Claim limit reached! You can claim again in: **{:d}h {:d}m {:d}s**'
-                                      .format(int(remaining // 3600), int(remaining // 60 % 60), int(remaining % 60)))
+        timestamp = (now - latest_claim[0]).total_seconds()
+        if timestamp < cfg.config['CLAIM_COOLDOWN']:
+            remaining = cfg.config['CLAIM_COOLDOWN'] - timestamp
+            raise util.CleanException('Claim cooldown: **{:d}m {:d}s**'.format(int(remaining // 60), int(remaining % 60)))
 
     card.owner_id = user_id
     card.claim_timestamp = dt.datetime.utcnow()
