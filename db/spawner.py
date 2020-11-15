@@ -78,8 +78,10 @@ def claim(user_id, channel_id, guild_id):
     if not card:
         return None
 
-    latest_claim = session.query(Card.claim_timestamp) \
-        .filter_by(guild_id=guild_id) \
+    latest_claim = session.query(Card.claim_timestamp, CardDefinition.rarity) \
+        .select_from(Card) \
+        .join(CardDefinition) \
+        .filter(Card.guild_id == guild_id) \
         .filter(Card.owner_ids == str(user_id)) \
         .order_by(Card.claim_timestamp.desc()) \
         .first()
@@ -87,8 +89,9 @@ def claim(user_id, channel_id, guild_id):
     if latest_claim:
         now = dt.datetime.utcnow()
         timestamp = (now - latest_claim[0]).total_seconds()
-        if timestamp < cfg.config['CLAIM_COOLDOWN']:
-            remaining = cfg.config['CLAIM_COOLDOWN'] - timestamp
+        cooldown = cfg.config['CLAIM_COOLDOWN'][latest_claim[1]]
+        if timestamp < cooldown:
+            remaining = cooldown - timestamp
             raise util.CleanException('Claim cooldown: **{:d}m {:d}s**'.format(int(remaining // 60), int(remaining % 60)))
 
     card.owner_id = user_id

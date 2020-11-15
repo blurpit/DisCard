@@ -255,6 +255,13 @@ async def disable_event_set(ctx:Context, set_name:str):
 
 @client.command()
 @admin_command()
+async def set_claim_cooldown(ctx:Context, rarity:str, value:int):
+    rarity = cfg.Rarity[rarity.upper()]
+    cfg.config['CLAIM_COOLDOWN'][rarity] = value
+    await ctx.send('Set claim cooldown for {} to {} seconds'.format(rarity, value))
+
+@client.command()
+@admin_command()
 async def spawn(ctx, card:Union[int, str]=None):
     definition = db.spawner.get_definition(ctx.guild.id, card)
     if definition:

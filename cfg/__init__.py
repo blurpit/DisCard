@@ -36,7 +36,13 @@ config = dict(
         768172182312058880: {768172182312058884} # Dumpster Fire
     },
 
-    CLAIM_COOLDOWN = 5*60, # Cooldown (seconds) between allowed card claims
+    CLAIM_COOLDOWN = { # Cooldown (seconds) between allowed card claims
+        Rarity.COMMON: 5*60,
+        Rarity.RARE: 25*60,
+        Rarity.EPIC: 60*60,
+        Rarity.MEMBER: 4*60*60,
+        Rarity.EVENT: 10*60
+    },
 
     SPAWN_INTERVAL = 37.5*60, # Time (seconds) between card spawns (0 to disable)
     SPAWN_INTERVAL_VARIATION = 0.2,  # Percent variation for delay between spawns
