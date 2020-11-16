@@ -8,3 +8,4 @@ Session = sessionmaker(bind=engine)
 session = Session()
 
 from .models import *
+from .query import *

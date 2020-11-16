@@ -432,7 +432,7 @@ async def trade_add(ctx:Context, transaction:db.Transaction, card:Union[int, str
     if transaction.locked: return
 
     added_cards = transaction.card_set(transaction.get_user(ctx.author.id))
-    cards = util.query_card_amount(ctx.author.id, ctx.guild.id, card, amount, exclude=added_cards)
+    cards = db.query_card_amount(ctx.author.id, ctx.guild.id, card, amount, exclude=added_cards)
     if cards:
         # Cannot add member cards to Discard trade
         if transaction.is_party(0) and any(c.definition.rarity == cfg.Rarity.MEMBER for c in cards):
@@ -463,7 +463,7 @@ async def untrade(ctx:Context, card:Union[int, str], amount:Union[int, str]=1):
     if not transaction: raise util.NoActiveTrade()
     if transaction.locked: return
 
-    cards = util.query_cards(transaction.card_set(ctx.author.id), card_filter=card)[:amount if amount != 'all' else None]
+    cards = db.query_cards(transaction.card_set(ctx.author.id), card_filter=card)[:amount if amount != 'all' else None]
     if cards:
         transaction.remove_cards(ctx.author.id, cards)
         db.session.commit()

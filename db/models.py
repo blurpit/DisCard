@@ -21,7 +21,6 @@ class CardDefinition(Model):
     expansion = Column(Enum(cfg.Expansion, create_constraint=False), nullable=False)
     image_id = Column(Integer, nullable=True)
     description = Column(Text, nullable=False)
-    # type = Column(Enum(cfg.CardType), nullable=False)
 
     instances:Iterable = relationship('Card', backref='definition')
 
@@ -211,15 +210,16 @@ class Transaction(Model):
                     "• When both parties have accepted, the trade will be complete, and you'll each receive each other's offered cards!\n" \
                     "Be sure to check your inventory while trading! **$inventory** is disabled here to reduce clutter, but you can use it in #ccc-commands."
 
+        from . import query_card_map
         embed.add_field(
             name=f"{name_1}'s Offer",
-            value=self._get_offer_field_text(util.query_card_map(self.card_set(1)))
+            value=self._get_offer_field_text(query_card_map(self.card_set(1)))
         )
         embed.add_field(
             name=f"{name_2}'s Offer",
             value=self._get_discard_offer_field_text(util.calculate_discard_offer(self.card_set(1)))
                 if self.is_party(0) and not self.complete else
-                self._get_offer_field_text(util.query_card_map(self.card_set(2)))
+                self._get_offer_field_text(query_card_map(self.card_set(2)))
         )
 
         if closed: embed.set_footer(text='Trade has been canceled.')

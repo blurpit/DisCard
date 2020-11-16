@@ -40,9 +40,9 @@ def execute(transaction:Transaction):
     if not (transaction.cards_1 or transaction.cards_2): return
 
     if transaction.cards_1:
-        for card in util.query_cards(transaction.card_set(1)):
+        for card in query_cards(transaction.card_set(1)):
             card.owner_ids += ';' + str(transaction.user_2)
     if transaction.cards_2:
-        for card in util.query_cards(transaction.card_set(2)):
+        for card in query_cards(transaction.card_set(2)):
             card.owner_ids += ';' + str(transaction.user_1)
     session.commit()
