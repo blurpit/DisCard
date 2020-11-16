@@ -4,3 +4,5 @@ client_secret.txt
 test.py
 data/*.db
 data/event/event.json
+data/event/hangman/words.txt
+data/images
