@@ -4,7 +4,7 @@ from . import session
 from .models import *
 
 
-def query_card_amount(user_id, guild_id, card, amount, exclude=()):
+def query_from_inventory(user_id, guild_id, card, amount, exclude=()):
     return session.query(Card) \
         .join(CardDefinition) \
         .filter(Card.guild_id == guild_id) \
@@ -40,3 +40,19 @@ def query_rarity_map(card_ids):
         .group_by(CardDefinition.rarity) \
         .all()
     return dict(cards)
+
+def query_card_ownership(user_id, guild_id, card):
+    """ Query card definition, number in inventory, and T/F if it's in user's dex """
+    definition = session.query(CardDefinition) \
+        .select_from(Card).join(CardDefinition) \
+        .filter(Card.guild_id == guild_id) \
+        .filter(or_(Card.card_id == card, func.lower(CardDefinition.name) == func.lower(card))) \
+        .filter(Card.owner_ids.contains(str(user_id))) \
+        .one_or_none()
+    count = session.query(Card) \
+        .select_from(Card).join(CardDefinition) \
+        .filter(Card.owner_ids.endswith(str(user_id))) \
+        .filter(or_(Card.card_id == card, func.lower(CardDefinition.name) == func.lower(card))) \
+        .count() \
+        if definition else 0
+    return definition, count

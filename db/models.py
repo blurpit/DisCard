@@ -44,9 +44,9 @@ class CardDefinition(Model):
 
         if preview:
             if count == 1:
-                embed.set_footer(text=f'You own 1 copy of this card.')
+                embed.set_footer(text=f'You currently own 1 copy of this card.')
             elif count is not None:
-                embed.set_footer(text=f'You own {count} copies of this card.')
+                embed.set_footer(text=f'You currently own {count} copies of this card.')
         else:
             embed.set_footer(text=f'This card is unclaimed! Use $claim to claim it!')
 

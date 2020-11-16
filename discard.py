@@ -327,15 +327,12 @@ async def inventory_page_turn(message, user, page, max_page):
 
 @client.command(aliases=['show', 'preview'])
 @command_channel()
-async def view(ctx:Context, card:Union[int, str]):
-    inv = db.Inventory(ctx.author.id, ctx.guild.id)
-    if card in inv:
-        await ctx.send(embed=inv[card].get_embed(
-            ctx, preview=True,
-            count=inv.count(card))
-        )
+async def view(ctx:Context, *, card:Union[int, str]):
+    definition, count = db.query_card_ownership(ctx.author.id, ctx.guild.id, card)
+    if definition:
+        await ctx.send(embed=definition.get_embed(preview=True, count=count))
     else:
-        await ctx.send("You don't have that card in your collection.")
+        await ctx.send("You haven't discovered that card.")
 
 @client.command(aliases=['deck', 'cardeck', 'carddeck', 'cardex', 'carddex'])
 @command_channel()
@@ -432,7 +429,7 @@ async def trade_add(ctx:Context, transaction:db.Transaction, card:Union[int, str
     if transaction.locked: return
 
     added_cards = transaction.card_set(transaction.get_user(ctx.author.id))
-    cards = db.query_card_amount(ctx.author.id, ctx.guild.id, card, amount, exclude=added_cards)
+    cards = db.query_from_inventory(ctx.author.id, ctx.guild.id, card, amount, exclude=added_cards)
     if cards:
         # Cannot add member cards to Discard trade
         if transaction.is_party(0) and any(c.definition.rarity == cfg.Rarity.MEMBER for c in cards):
