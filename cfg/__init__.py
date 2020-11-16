@@ -21,12 +21,13 @@ config = dict(
         768172182312058880: {768203474214191104} # Dumpster Fire
     },
     SPAWN_EXCLUDE_CHANNELS = { # Which channels cards should NOT be able to spawn in
-        # ccc-commands, ccc-feedback, spam, nsfw, talk-to-bots, secret-mod-chat, secreter-bot-testing,
-        # hw-help, cs-hw-help, career-prep, small-brain-voice-chat
-        687146032416555047: {767452299236474910, 768193489585963048, 772548035616047110,
-                             701264348860907582, 693670292697907230, 700426514436587541,
-                             687165310054432805, 691763308059164722, 753294182994411540,
-                             753294145979809952, 753294224715284561, 753294360149360752},
+        # ccc-commands, ccc-feedback, quotes, spam, nsfw, talk-to-bots, secret-mod-chat,
+        # secreter-bot-testing, hw-help, cs-hw-help, career-prep, small-brain-voice-chat
+        687146032416555047: {767452299236474910, 768193489585963048, 776673735943127060,
+                             772548035616047110, 701264348860907582, 693670292697907230,
+                             700426514436587541, 687165310054432805, 691763308059164722,
+                             753294182994411540, 753294145979809952, 753294224715284561,
+                             753294360149360752},
         693124716176736386: {767822158294286387, 767855584560939029}, # Dumping Grounds
         768172182312058880: set() # Dumpster Fire
     },
