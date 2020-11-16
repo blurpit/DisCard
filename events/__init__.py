@@ -10,6 +10,7 @@ from discord.ext.commands import Context
 import db.spawner
 
 import cfg
+import util
 
 json = open('data/event/event.json', 'r+')
 
@@ -51,7 +52,7 @@ class Event:
         return False
 
     async def on_guess(self, ctx:Context, guess):
-        if ctx.channel.id != self.data['channel_id']:
+        if guess is None or ctx.channel.id != self.data['channel_id']:
             return
 
         guesses = self.data['guesses'].get(str(ctx.author.id), 0)
@@ -79,10 +80,10 @@ class Event:
 
         self.data = None
 
-    async def on_incorrect(self, ctx, guess, guesses):
+    async def on_incorrect(self, ctx:Context, guess, guesses):
         await ctx.message.add_reaction(cfg.emoji['x'])
 
-    async def on_out_of_guesses(self, ctx, guess):
+    async def on_out_of_guesses(self, ctx:Context, guess):
         pass
 
     def get_embed_base(self):
@@ -104,6 +105,12 @@ class Event:
 
         return embed
 
+    async def fetch_message(self, ctx:Context):
+        try:
+            return await ctx.fetch_message(self.data['message_id'])
+        except d.NotFound:
+            return None
+
 class Question(Event):
     max_guesses = 5
 
@@ -119,9 +126,6 @@ class Question(Event):
 
     def check(self, guess):
         return bool(re.fullmatch(self.content['a'], guess, re.IGNORECASE))
-
-class Expression(Event):
-    max_guesses = None
 
 class Trivia(Event):
     max_guesses = 1
@@ -162,12 +166,136 @@ class Trivia(Event):
     def check(self, guess):
         return guess.upper() == self.content['answer']
 
-    async def on_incorrect(self, ctx, guess, guesses):
+    async def on_incorrect(self, ctx:Context, guess, guesses):
         await ctx.message.delete()
+
+class Hangman(Event):
+    max_guesses = 1
+    image_ids = [
+        777400582973030400, # Gallows (Empty)
+        777400587754799144, # Head
+        777400591751053312, # Body
+        777400594981715978, # Leg 1
+        777400598583705620, # Leg 2
+        777400603441496084, # Arm 1
+        777400607128289312, # Arm 2
+        777437991664746506, # Eye 1
+        777437985783808001, # Eye 2
+        777438502233047050 # Mouth
+    ]
+
+    def generate(self):
+        with open('data/event/hangman/words.txt') as f:
+            super().generate()
+
+            answer = next(f).strip().upper()
+            for i, line in enumerate(f, 2):
+                if random.randrange(i): continue
+                answer = line.strip().upper()
+
+            self.content = {
+                'answer': answer,
+                'guessed': ''
+            }
+
+            return dict(embed=self.get_embed_base())
+
+    def check(self, guess):
+        return guess == self.content['answer']
+
+    async def on_guess(self, ctx:Context, guess):
+        if guess is None: return
+        guess = guess.strip().upper()
+
+        guesses = self.data['guesses'].get(str(ctx.author.id), 0)
+        if self.max_guesses is not None and guesses >= self.max_guesses:
+            await self.on_out_of_guesses(ctx, guess)
+        else:
+            if len(guess) > 1:
+                await super().on_guess(ctx, guess)
+            elif len(guess) == 1 and guess in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' and guess not in self.content['guessed']:
+                if guess in self.content['answer']:
+                    await self.on_correct(ctx, guess, 0)
+                else:
+                    await self.on_incorrect(ctx, guess, 0)
+                self.write(ctx.guild.id)
+
+    async def on_correct(self, ctx:Context, guess, guesses):
+        if len(guess) > 1:
+            return await super().on_correct(ctx, guess, guesses)
+        elif len(guess) == 1:
+            await ctx.message.add_reaction(cfg.emoji['check'])
+            await self._update_letter_guess(ctx, guess)
+
+    async def on_incorrect(self, ctx:Context, guess, guesses):
+        await super().on_incorrect(ctx, guess, guesses)
+        if len(guess) == 1:
+            await self._update_letter_guess(ctx, guess)
+
+    def get_embed_base(self):
+        embed = super().get_embed_base()
+        if self.failed: embed.description = 'RIP in peace. Nobody guessed the word and the Hangman has died. Press F to pay respects.\n\nAnswer:\n'
+        embed.description += self._get_letter_display()
+        embed.description += f"\nGuessed: **{self._get_guessed_text()}**"
+
+        embed.set_image(url=self._get_image_url())
+        text = 'Guess a letter or the full word using $guess'
+        if self.failed:
+            text = embed.Empty
+        elif self.max_guesses > 1:
+            text += f' (you have unlimited letter guesses but {self.max_guesses} word guesses)'
+        else:
+            text += ' (you have unlimited letter guesses but only 1 word guess)'
+        embed.set_footer(text=text)
+        return embed
+
+    async def _update_letter_guess(self, ctx:Context, guess):
+        self.content['guessed'] += guess
+        msg = await self.fetch_message(ctx)
+        if msg:
+            await msg.edit(embed=self.get_embed_base())
+        else:
+            msg = await ctx.send(embed=self.get_embed_base())
+            await self.on_message(msg)
+        if self.failed:
+            await ctx.send(f"RIP in peace. Nobody guessed the word and the Hangman has died. "
+                           f"Press F to pay respects.\nAnswer was: **{self.content['answer']}**")
+            self.data = None
+
+    @property
+    def stage(self):
+        return util.clamp(
+            len(set(self.content['guessed']) - set(self.content['answer'])),
+            0, len(self.image_ids)-1
+        )
+
+    @property
+    def failed(self):
+        return self.stage == len(self.image_ids)-1
+
+    def _get_letter_display(self):
+        text = ''
+        for ch in self.content['answer']:
+            if ch == ' ':
+                text += ':black_small_square: '
+            elif ch in self.content['guessed'] or self.failed:
+                text += ':regional_indicator_' + ch.lower() + ': '
+            else:
+                text += ':blue_square: '
+        return text
+
+    def _get_image_url(self):
+        return cfg.config['IMAGE_URL_BASE'].format(self.image_ids[self.stage], self.stage)
+
+    def _get_guessed_text(self):
+        if self.content['guessed']:
+            return ', '.join(sorted(self.content['guessed']))
+        else:
+            return 'None'
 
 
 def create() -> Event:
-    return random.choice([Question, Trivia])()
+    return random.choice([Question, Trivia, Hangman])()
 
 def current(guild_id) -> Optional[Event]:
     data = loads(json.read()).get(str(guild_id), None)
