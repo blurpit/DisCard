@@ -216,6 +216,9 @@ async def enable(ctx:Context, channel:d.TextChannel, option:str, *sub_opts:str):
     elif option == 'trading':
         cfg.config['TRADE_CHANNELS'][ctx.guild.id].add(channel.id)
         await ctx.send(f'Enabled {channel.mention} for card trading.')
+    elif option == 'events':
+        cfg.config['SPAWN_EVENT_GAME_CHANNELS'].add(channel.id)
+        await ctx.send(f'Enabled {channel.mention} for event game spawning.')
 
 @client.command()
 @admin_command()
@@ -233,6 +236,9 @@ async def disable(ctx:Context, channel:d.TextChannel, option:str, *sub_opts:str)
     elif option == 'trading':
         cfg.config['TRADE_CHANNELS'][ctx.guild.id].discard(channel.id)
         await ctx.send(f'Disabled {channel.mention} for card trading.')
+    elif option == 'events':
+        cfg.config['SPAWN_EVENT_GAME_CHANNELS'].discard(channel.id)
+        await ctx.send(f'Disabled {channel.mention} for event game spawning.')
 
 @client.command()
 @admin_command()
