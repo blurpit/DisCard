@@ -294,11 +294,21 @@ class Hangman(Event):
             return 'None'
 
 
-def create() -> Event:
-    return random.choice([Question, Trivia, Hangman])()
+event_map = {
+    'question': Question,
+    'trivia': Trivia,
+    'hangman': Hangman
+}
+
+def create(cls=None) -> Event:
+    if cls is None:
+        cls = random.choice([Question, Trivia])
+    else:
+        cls = event_map[cls.lower()]
+    return cls()
 
 def current(guild_id) -> Optional[Event]:
     data = loads(json.read()).get(str(guild_id), None)
     json.seek(0)
     if not data: return None
-    return globals()[data['type']](**data)
+    return event_map[data['type']](**data)

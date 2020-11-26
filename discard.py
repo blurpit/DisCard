@@ -2,7 +2,6 @@ import asyncio
 import datetime as dt
 import random
 import traceback
-from operator import attrgetter
 from pprint import pformat
 from typing import Union
 
@@ -83,6 +82,7 @@ async def on_ready():
         client.loop.create_task(card_spawn_timer())
     if cfg.config['SPAWN_INTERVAL_END_TIME'] - cfg.config['SPAWN_INTERVAL_START_TIME'] > 0:
         client.loop.create_task(card_event_timer())
+        client.loop.create_task(card_event_timer('hangman'))
 
 @client.event
 async def on_command_error(ctx:Context, error):
@@ -266,8 +266,8 @@ async def spawn(ctx, card:Union[int, str]=None):
 
 @client.command()
 @admin_command()
-async def spawn_event(ctx:d.abc.Messageable):
-    event = events.create()
+async def spawn_event(ctx:d.abc.Messageable, event_type:str=None):
+    event = events.create(event_type)
 
     msg = await ctx.send(**event.generate())
     await event.on_message(msg)
@@ -566,7 +566,7 @@ async def card_spawn_timer():
                 await spawn(guild.get_channel(channel_id))
         await asyncio.sleep(60)
 
-async def card_event_timer():
+async def card_event_timer(event_type=None):
     await client.wait_until_ready()
     while not client.is_closed():
         now = pendulum.now('US/Eastern')
@@ -584,7 +584,7 @@ async def card_event_timer():
         for guild in client.guilds:
             if guild.id in cfg.config['ENABLED_GUILDS']:
                 channel_id = random.choice(list(cfg.config['SPAWN_EVENT_GAME_CHANNELS'][guild.id]))
-                await spawn_event(guild.get_channel(channel_id))
+                await spawn_event(guild.get_channel(channel_id), event_type)
         await asyncio.sleep(60)
 
 
