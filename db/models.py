@@ -106,7 +106,8 @@ class Card(Model):
             name = ctx.guild.get_member(self.owner_id).display_name
             if not preview:
                 embed.set_footer(text=f'Claimed by {name}!')
-                embed.set_image(url=embed.Empty)
+                if cfg.config['REMOVE_IMAGE_AFTER_CLAIM']:
+                    embed.set_image(url=embed.Empty)
 
         return embed
 

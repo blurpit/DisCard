@@ -59,6 +59,7 @@ config = dict(
     SPAWN_EVENT_CARD_RATE = 1/5, # Chance to spawn an Event rarity card instead of regular cards
     ENABLED_EVENT_CARD_SETS = set(), # Which sets should spawn Event cards
 
+    REMOVE_IMAGE_AFTER_CLAIM = True,
     ITEMS_PER_PAGE = 15, # Number of items that appear before wrapping to the next page
     IMAGE_URL_BASE = 'https://cdn.discordapp.com/attachments/767822158294286387/{}/{}.png', # Base URL for card images
     HELP_URL = 'https://docs.google.com/document/d/1wYg8EPSKm8Ndum1659isF7ho8P-bPlJHRELrXENn1fs/edit?usp=sharing', # URL link to help page
@@ -82,12 +83,15 @@ last_spawn = dt.datetime(1970, 1, 1)
 consecutive_messages = [0, 0]
 
 def set_config(key, value):
-    try:
-        value = float(value)
-        if value % 1 == 0:
-            value = int(value)
-    except ValueError:
-        pass
+    if value.lower() in ('true', 'false'):
+        value = value == 'true'
+    else:
+        try:
+            value = float(value)
+            if value % 1 == 0:
+                value = int(value)
+        except ValueError:
+            pass
     config[key] = value
     return value
 
