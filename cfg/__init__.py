@@ -20,16 +20,19 @@ config = dict(
         693124716176736386: {767876298310942720}, # Dumping Grounds
         768172182312058880: {768203474214191104} # Dumpster Fire
     },
-    SPAWN_EXCLUDE_CHANNELS = { # Which channels cards should NOT be able to spawn in
-        # ccc-commands, ccc-feedback, quotes, spam, nsfw, talk-to-bots, secret-mod-chat,
-        # secreter-bot-testing, hw-help, cs-hw-help, career-prep, small-brain-voice-chat
-        687146032416555047: {767452299236474910, 768193489585963048, 776673735943127060,
-                             772548035616047110, 701264348860907582, 693670292697907230,
-                             700426514436587541, 687165310054432805, 691763308059164722,
-                             753294182994411540, 753294145979809952, 753294224715284561,
-                             753294360149360752},
-        693124716176736386: {767822158294286387, 767855584560939029}, # Dumping Grounds
-        768172182312058880: set() # Dumpster Fire
+    SPAWN_INTERVAL_CHANNELS = { # Which channels cards should NOT be able to spawn in
+        # main-chat, ideas-for-the-server, voice-text-channel, memes-and-videos, games, minecraft, destiny-2, music
+        687146032416555047: {781599858858917918},
+        693124716176736386: {766730238193041438, 693124716176736389}, # Dumping Grounds
+        768172182312058880: {768172182312058884} # Dumpster Fire
+    },
+    SPAWN_MESSAGE_CHANNELS = {
+        # main-chat, ideas-for-the-server, voice-text-channel, memes-and-videos, games, minecraft, destiny-2, music
+        687146032416555047: {687146032416555057, 687151973463883778, 700516725044805652,
+                             687152279895408661, 687152338011815966, 689254144502268089,
+                             690936793247252531, 687154101611528200},
+        693124716176736386: {766730238193041438, 693124716176736389}, # Dumping Grounds
+        768172182312058880: {768172182312058884} # Dumpster Fire
     },
     SPAWN_EVENT_GAME_CHANNELS = { # Which channels card events can spawn
         687146032416555047: {687146032416555057}, # main-chat

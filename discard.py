@@ -67,19 +67,7 @@ async def add_page_reactions(message, max_page):
         if max_page > 5: await message.add_reaction(cfg.page_controls['first'])
         await message.add_reaction(cfg.page_controls['prev'])
         await message.add_reaction(cfg.page_controls['next'])
-        if max_page > 5: await message.add_reaction(cfg.page_controls['last'])
-
-def get_random_spawnable_channel(guild):
-    def spawnable(channel):
-        return isinstance(channel, d.TextChannel) \
-               and channel.id not in cfg.config['SPAWN_EXCLUDE_CHANNELS'][guild.id] \
-               and channel.id not in cfg.config['TRADE_CHANNELS'][guild.id]
-
-    channels = list(map(
-        attrgetter('id'),  # Map channel to channel ID
-        filter(spawnable, guild.channels)  # Filter for only TextChannels
-    ))
-    return guild.get_channel(random.choice(channels))
+        if max_page > 5: await message.add_reaction
 
 
 # --- Client Events --- #
@@ -119,8 +107,7 @@ async def on_message(message:d.Message):
 
         cfg.add_consecutive_message(message.author.id)
         if not message.clean_content.startswith(client.command_prefix) \
-                and message.channel.id not in cfg.config['SPAWN_EXCLUDE_CHANNELS'][message.guild.id] \
-                and message.channel.id not in cfg.config['TRADE_CHANNELS'][message.guild.id] \
+                and message.channel.id in cfg.config['SPAWN_MESSAGE_CHANNELS'][message.guild.id] \
                 and random.random() <= cfg.config['SPAWN_MESSAGE_CHANCE'] \
                 and dt.datetime.utcnow() >= cfg.last_spawn + dt.timedelta(seconds=cfg.config['SPAWN_MESSAGE_COOLDOWN']) \
                 and cfg.consecutive_messages[1] <= cfg.config['SPAWN_MESSAGE_MAX_CONSECUTIVE']:
@@ -215,26 +202,34 @@ async def config(ctx:Context, key=None, value=None):
 
 @client.command()
 @admin_command()
-async def enable(ctx:Context, channel:d.TextChannel, option:str):
+async def enable(ctx:Context, channel:d.TextChannel, option:str, *sub_opts:str):
     if option == 'commands':
         cfg.config['COMMAND_CHANNELS'][ctx.guild.id].add(channel.id)
         await ctx.send(f'Enabled {channel.mention} for commands.')
     elif option == 'spawning':
-        cfg.config['SPAWN_EXCLUDE_CHANNELS'][ctx.guild.id].discard(channel.id)
-        await ctx.send(f'Enabled {channel.mention} for card spawning.')
+        if not sub_opts or sub_opts[0] == 'message':
+            cfg.config['SPAWN_MESSAGE_CHANNELS'][ctx.guild.id].add(channel.id)
+            await ctx.send(f'Enabled {channel.mention} for card message spawning.')
+        if not sub_opts or sub_opts[0] == 'interval':
+            cfg.config['SPAWN_INTERVAL_CHANNELS'][ctx.guild.id].add(channel.id)
+            await ctx.send(f'Enabled {channel.mention} for card interval spawning.')
     elif option == 'trading':
         cfg.config['TRADE_CHANNELS'][ctx.guild.id].add(channel.id)
         await ctx.send(f'Enabled {channel.mention} for card trading.')
 
 @client.command()
 @admin_command()
-async def disable(ctx:Context, channel:d.TextChannel, option:str):
+async def disable(ctx:Context, channel:d.TextChannel, option:str, *sub_opts:str):
     if option == 'commands':
         cfg.config['COMMAND_CHANNELS'][ctx.guild.id].discard(channel.id)
         await ctx.send(f'Disabled {channel.mention} for commands.')
     elif option == 'spawning':
-        cfg.config['SPAWN_EXCLUDE_CHANNELS'][ctx.guild.id].add(channel.id)
-        await ctx.send(f'Disabled {channel.mention} for card spawning.')
+        if not sub_opts or sub_opts[0] == 'message':
+            cfg.config['SPAWN_MESSAGE_CHANNELS'][ctx.guild.id].discard(channel.id)
+            await ctx.send(f'Disabled {channel.mention} for card message spawning.')
+        if not sub_opts or sub_opts[0] == 'interval':
+            cfg.config['SPAWN_INTERVAL_CHANNELS'][ctx.guild.id].discard(channel.id)
+            await ctx.send(f'Disabled {channel.mention} for card interval spawning.')
     elif option == 'trading':
         cfg.config['TRADE_CHANNELS'][ctx.guild.id].discard(channel.id)
         await ctx.send(f'Disabled {channel.mention} for card trading.')
@@ -567,7 +562,8 @@ async def card_spawn_timer():
 
         for guild in client.guilds:
             if guild.id in cfg.config['ENABLED_GUILDS']:
-                await spawn(get_random_spawnable_channel(guild))
+                channel_id = random.choice(list(cfg.config['SPAWN_INTERVAL_CHANNELS'][guild.id]))
+                await spawn(guild.get_channel(channel_id))
         await asyncio.sleep(60)
 
 async def card_event_timer():
