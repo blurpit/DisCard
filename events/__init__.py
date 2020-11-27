@@ -39,7 +39,7 @@ class Event:
         json.seek(0)
 
     def generate(self):
-        self.data['type'] = self.__class__.__name__
+        self.data['type'] = self.__class__.__name__.lower()
         self.data['set'] = random.choice([s for s in cfg.Set if s != cfg.Set.MEMBERS]).name
         self.data['guesses'] = {}
 
@@ -311,4 +311,4 @@ def current(guild_id) -> Optional[Event]:
     data = loads(json.read()).get(str(guild_id), None)
     json.seek(0)
     if not data: return None
-    return event_map[data['type']](**data)
+    return event_map[data['type'].lower()](**data)
