@@ -41,10 +41,13 @@ def get_definition(guild_id, card=None):
             return session.query(CardDefinition).filter_by(name=card).one_or_none()
 
 def get_random_definition(card_set=None, rarity=None):
-    return session.query(CardDefinition) \
-        .filter(or_(card_set is None, CardDefinition.set == card_set)) \
-        .filter(or_(rarity is None, CardDefinition.rarity == rarity)) \
-        .filter(or_(CardDefinition.rarity != cfg.Rarity.EVENT, CardDefinition.set.in_(cfg.config['ENABLED_EVENT_CARD_SETS']))) \
+    q = session.query(CardDefinition)
+    if card_set is not None:
+        q = q.filter_by(set=card_set)
+    if rarity is not None:
+        q = q.filter_by(rarity=rarity)
+    return q.filter(or_(CardDefinition.rarity != cfg.Rarity.EVENT,
+                        CardDefinition.set.in_(cfg.config['ENABLED_EVENT_CARD_SETS']))) \
         .order_by(func.random()) \
         .first()
 
