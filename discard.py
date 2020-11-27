@@ -66,7 +66,7 @@ async def add_page_reactions(message, max_page):
         if max_page > 5: await message.add_reaction(cfg.page_controls['first'])
         await message.add_reaction(cfg.page_controls['prev'])
         await message.add_reaction(cfg.page_controls['next'])
-        if max_page > 5: await message.add_reaction
+        if max_page > 5: await message.add_reaction(cfg.page_controls['last'])
 
 
 # --- Client Events --- #
