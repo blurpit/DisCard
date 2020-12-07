@@ -9,6 +9,7 @@ config = dict(
         # 693124716176736386, # Dumping Grounds
         # 768172182312058880  # Dumpster Fire
     },
+    LOG_CHANNEL = 772548035616047110,
 
     COMMAND_CHANNELS = { # Channels where regular commands are allowed
         687146032416555047: {767452299236474910}, # ccc-commands

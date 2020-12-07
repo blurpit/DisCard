@@ -77,6 +77,8 @@ class Event:
         embed.set_footer(text=f'This card was won by {ctx.author.display_name} in a card spawn event!')
         msg = await ctx.send(content=f'🎉 Congratulations, {ctx.author.mention}! The following card has been added to your inventory:', embed=embed)
         db.spawner.create_card_instance(definition, msg.id, ctx.channel.id, ctx.guild.id, owner_id=str(ctx.author.id))
+        util.log.info('Event Game (%s) correctly guessed by %s: "%s". Card spawned: [#%d] %s (%s)',
+                      str(self), str(ctx.author), guess, definition.id, definition.name, definition.rarity.name)
 
         self.data = None
 
@@ -110,6 +112,9 @@ class Event:
             return await ctx.fetch_message(self.data['message_id'])
         except d.NotFound:
             return None
+
+    def __str__(self):
+        return self.__class__.__name__
 
 class Question(Event):
     max_guesses = 5

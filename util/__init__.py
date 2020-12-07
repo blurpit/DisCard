@@ -1,9 +1,17 @@
+import asyncio
+import logging
 import math
 
-from sqlalchemy import func, or_
+import discord as d
 
-import db
 import cfg
+import db
+
+log = logging.getLogger('DiscardLogger')
+handler = logging.FileHandler('logs/discard.log')
+handler.setFormatter(logging.Formatter('[%(levelname)s] [%(asctime)s] %(message)s'))
+log.addHandler(handler)
+log.setLevel(logging.DEBUG)
 
 
 def max_page(length):
@@ -52,6 +60,59 @@ def calculate_discard_offer(card_ids):
     result[cfg.Rarity.COMMON] = int(score)
 
     return result
+
+
+class TaskLooper:
+    min_delay = 60 # Minimum delay. Prevents tasks running too quickly
+    post_delay = 30 # Delay after running and before calculating the next delay
+    err_delay = 5*60 # Delay for retrying after an error
+
+    def delay(self):
+        raise NotImplemented
+
+    async def run(self, client:d.Client):
+        raise NotImplemented
+
+    async def create(self, client:d.Client):
+        await client.wait_until_ready()
+        log.info('Task created: %s', str(self))
+        while True:
+            if client.is_closed():
+                raise d.ClientException('Client is closed.')
+
+            delay = clamp(self.delay(), low=self.min_delay)
+            log.debug('Scheduled task %s for %.0fhr %.0fmin %.2fsec (%f)',
+                     str(self), delay//3600, delay%3600//60, delay%60, delay)
+
+            await asyncio.sleep(delay)
+            for guild in client.guilds:
+                if guild.id in cfg.config['ENABLED_GUILDS']:
+                    while not await self._execute(client, guild):
+                        await asyncio.sleep(self.err_delay)
+
+    async def handle(self, client:d.Client, guild:d.Guild, error):
+        try:
+            if cfg.config['LOG_CHANNEL']:
+                channel = client.get_channel(cfg.config['LOG_CHANNEL'])
+                await channel.send(":warning: Failed to run task '{}' in guild '{}'. Error:```\n{}: {}```Trying again in {} seconds."
+                                   .format(str(self), str(guild), type(error).__name__, str(error), self.err_delay))
+        except:
+            log.error('Failed to send error to log channel.')
+        finally:
+            log.error("Failed to run task '%s'. Trying again in %d seconds.", str(self), self.err_delay, exc_info=error)
+            return False
+
+    async def _execute(self, client, guild):
+        try:
+            log.info("Running task %s for guild '%s' (%d)", str(self), guild.name, guild.id)
+            await self.run(guild)
+            await asyncio.sleep(self.post_delay)
+            return True
+        except Exception as error:
+            return await self.handle(client, guild, error)
+
+    def __str__(self):
+        return self.__class__.__name__
 
 
 class CleanException(Exception):

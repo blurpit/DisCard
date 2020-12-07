@@ -1,7 +1,5 @@
-import asyncio
 import datetime as dt
 import random
-import traceback
 from pprint import pformat
 from typing import Union
 
@@ -73,16 +71,18 @@ async def add_page_reactions(message, max_page):
 
 @client.event
 async def on_ready():
-    print("\nLogged in as {}".format(client.user))
+    util.log.info('\n')
+    util.log.info('Logged in as %s (%d)', str(client.user), client.user.id)
+    print('Logged in as {}'.format(client.user))
 
     activity = d.Activity(type=d.ActivityType.listening, name='the sweet sound of shuffling')
     await client.change_presence(activity=activity)
 
     if cfg.config['SPAWN_INTERVAL'] > 0:
-        client.loop.create_task(card_spawn_timer())
+        client.loop.create_task(CardIntervalSpawnTask().create(client))
     if cfg.config['SPAWN_INTERVAL_END_TIME'] - cfg.config['SPAWN_INTERVAL_START_TIME'] > 0:
-        client.loop.create_task(card_event_timer())
-        client.loop.create_task(card_event_timer('hangman'))
+        client.loop.create_task(CardEventGameTask().create(client))
+        client.loop.create_task(CardEventGameTask('hangman').create(client))
 
 @client.event
 async def on_command_error(ctx:Context, error):
@@ -96,8 +96,7 @@ async def on_command_error(ctx:Context, error):
         await ctx.send(str(error))
         return
 
-    print(f'\nMessage: "{ctx.message.content}"')
-    traceback.print_exception(type(error), error, error.__traceback__)
+    util.log.error('Error on command: %s', ctx.message.content, exc_info=error)
     await ctx.send(f"```{type(error).__name__}: {str(error)}```")
 
 @client.event
@@ -111,6 +110,7 @@ async def on_message(message:d.Message):
                 and random.random() <= cfg.config['SPAWN_MESSAGE_CHANCE'] \
                 and dt.datetime.utcnow() >= cfg.last_spawn + dt.timedelta(seconds=cfg.config['SPAWN_MESSAGE_COOLDOWN']) \
                 and cfg.consecutive_messages[1] <= cfg.config['SPAWN_MESSAGE_MAX_CONSECUTIVE']:
+            util.log.debug('Message spawn on message by %s: "%s"', str(message.author), message.content)
             await spawn(message.channel)
 
         await client.process_commands(message)
@@ -163,18 +163,21 @@ async def chungus(ctx:Context):
 @client.command()
 @admin_command()
 async def ping(ctx:Context):
-    await ctx.send('Pong!')
+    latency = client.latency * 1000
+    util.log.debug('[Admin] Pinged with latency: %f ms', latency)
+    await ctx.send('Pong! (latency: {:.0f} ms)'.format(latency))
 
 @client.command()
 @admin_command()
 async def kill(ctx:Context):
     await ctx.send('Goodbye...')
-    print('Killing...')
+    util.log.warning('[Admin] Bot killed by %s', str(ctx.author))
     await client.close()
 
 @client.command()
 @admin_command()
 async def sql(ctx:Context, *, clause:str):
+    util.log.warning('[Admin] Execute SQL: %s', clause)
     response = db.session.execute(clause)
     if response.returns_rows:
         content = '\n'.join(', '.join(map(str, row)) for row in response)
@@ -197,12 +200,14 @@ async def config(ctx:Context, key=None, value=None):
             value = cfg.config[key]
             await ctx.send("```py\n{}\n{}```".format(pformat(value, indent=4, width=90, compact=True), type(value)))
         else:
+            util.log.warning("[Admin] Config change for %s to %s %s", key, str(value), str(type(value)))
             value = cfg.set_config(key, value)
             await ctx.send("Set `{} = {} {}`".format(key, value, type(value)))
 
 @client.command()
 @admin_command()
 async def enable(ctx:Context, channel:d.TextChannel, option:str, *sub_opts:str):
+    util.log.warning("[Admin] Enable channel '%s' (%d) for %s", channel, channel.id, '/'.join((option, *sub_opts)))
     if option == 'commands':
         cfg.config['COMMAND_CHANNELS'][ctx.guild.id].add(channel.id)
         await ctx.send(f'Enabled {channel.mention} for commands.')
@@ -223,6 +228,7 @@ async def enable(ctx:Context, channel:d.TextChannel, option:str, *sub_opts:str):
 @client.command()
 @admin_command()
 async def disable(ctx:Context, channel:d.TextChannel, option:str, *sub_opts:str):
+    util.log.warning("[Admin] Disable channel '%s' (%d) for %s", channel, channel.id, '/'.join((option, *sub_opts)))
     if option == 'commands':
         cfg.config['COMMAND_CHANNELS'][ctx.guild.id].discard(channel.id)
         await ctx.send(f'Disabled {channel.mention} for commands.')
@@ -243,6 +249,7 @@ async def disable(ctx:Context, channel:d.TextChannel, option:str, *sub_opts:str)
 @client.command()
 @admin_command()
 async def enable_event_set(ctx:Context, set_name:str):
+    util.log.warning('[Admin] Enable event card set: %s', set_name)
     s = cfg.Set[set_name.upper()]
     cfg.config['ENABLED_EVENT_CARD_SETS'].add(s)
     await ctx.send('Enabled event card spawning for **{} Set**.'.format(s.text))
@@ -250,6 +257,7 @@ async def enable_event_set(ctx:Context, set_name:str):
 @client.command()
 @admin_command()
 async def disable_event_set(ctx:Context, set_name:str):
+    util.log.warning('[Admin] Disable event card set: %s', set_name)
     s = cfg.Set[set_name.upper()]
     cfg.config['ENABLED_EVENT_CARD_SETS'].discard(s)
     await ctx.send('Disabled event card spawning for **{} Set**.'.format(s.text))
@@ -257,6 +265,7 @@ async def disable_event_set(ctx:Context, set_name:str):
 @client.command()
 @admin_command()
 async def set_claim_cooldown(ctx:Context, rarity:str, value:int):
+    util.log.warning('[Admin] Set claim cooldown for %s: %d', rarity, value)
     rarity = cfg.Rarity[rarity.upper()]
     cfg.config['CLAIM_COOLDOWN'][rarity] = value
     await ctx.send('Set claim cooldown for {} to {} seconds'.format(rarity, value))
@@ -268,12 +277,17 @@ async def spawn(ctx, card:Union[int, str]=None):
     if definition:
         msg = await ctx.send(embed=definition.get_embed())
         db.spawner.create_card_instance(definition, msg.id, msg.channel.id, msg.guild.id)
+        util.log.info('Card Spawn: [#%d] %s (%s), guild: %s, channel: %s',
+                      definition.id, definition.name, definition.rarity.name, str(msg.guild), str(msg.channel))
         cfg.last_spawn = dt.datetime.utcnow()
+    else:
+        util.log.error('No definition was found for card spawn!')
 
 @client.command()
 @admin_command()
 async def spawn_event(ctx:d.abc.Messageable, event_type:str=None):
     event = events.create(event_type)
+    util.log.info('Event spawned of type: %s', str(event))
 
     msg = await ctx.send(**event.generate())
     await event.on_message(msg)
@@ -295,6 +309,9 @@ async def claim(ctx:Context):
         await ctx.message.add_reaction(cfg.emoji['x'])
     else:
         # Claim successful
+        util.log.info('Card Claim by %s: [#%d] %s, instance ID: %d, guild: %s, channel: %s',
+                      str(ctx.author), card.definition.id, card.definition.name, card.id, str(ctx.guild),
+                      str(ctx.channel))
         try:
             msg = await ctx.channel.fetch_message(card.message_id)
         except d.NotFound:
@@ -380,6 +397,7 @@ async def trade(ctx:Context, action:Union[d.Member, int, str, None]=None, amount
         elif action.bot: await ctx.send("Sorry, but bots just don't show enough appreciation for the art of the trade for me to support that. Call it principle.")
         elif not transaction:
             transaction = db.transactions.open_transaction(ctx.author.id, action.id, ctx.guild.id)
+            util.log.info('[Trade] Transaction opened between %s and %s', str(ctx.author), str(action))
             await update_trade(ctx, transaction)
         elif transaction.is_party(ctx.author.id): await ctx.send("You already have an active trade open. Please finish or cancel it before starting another one.")
         elif transaction.is_party(action.id): await ctx.send("This person already has an active trade open. Please wait for them to finish before starting a trade.")
@@ -438,6 +456,8 @@ async def trade_add(ctx:Context, transaction:db.Transaction, card:Union[int, str
 
         transaction.add_cards(ctx.author.id, cards)
         db.session.commit()
+        util.log.debug('[Trade] Added card instances to transaction: %s [%s]',
+                       str(ctx.author), ', '.join('#'+str(c.card_id) for c in cards))
         await update_trade(ctx, transaction)
         return True
 
@@ -465,6 +485,8 @@ async def untrade(ctx:Context, card:Union[int, str], amount:Union[int, str]=1):
     if cards:
         transaction.remove_cards(ctx.author.id, cards)
         db.session.commit()
+        util.log.debug('[Trade] Removed card instances from transaction: %s [%s]',
+                       str(ctx.author), ', '.join('#'+str(c.card_id) for c in cards))
         await update_trade(ctx, transaction)
 
 @client.command()
@@ -477,6 +499,7 @@ async def accept(ctx:Context):
     if transaction.has_accepted(ctx.author.id): return
 
     transaction.set_accepted(ctx.author.id, True)
+    util.log.debug('[Trade] %s has accepted the transaction.', str(ctx.author))
 
     # Discard
     if transaction.is_party(0):
@@ -485,6 +508,7 @@ async def accept(ctx:Context):
 
     if transaction.complete:
         db.transactions.execute(transaction)
+        util.log.info('[Trade] Transaction completed & executed. (accepted by %s)', str(ctx.author))
     await update_trade(ctx, transaction)
 
 @client.command()
@@ -497,6 +521,7 @@ async def unaccept(ctx:Context):
     if not transaction.has_accepted(ctx.author.id): return
 
     transaction.set_accepted(ctx.author.id, False)
+    util.log.debug('[Trade] %s has unaccepted the transaction.', str(ctx.author))
     await update_trade(ctx, transaction)
 
 @client.command(aliases=['close'])
@@ -508,6 +533,7 @@ async def cancel(ctx:Context):
     if transaction:
         member_1 = ctx.guild.get_member(transaction.user_1)
         member_2 = ctx.guild.get_member(transaction.user_2) if transaction.user_2 != 0 else client.user
+        util.log.info('[Trade] Transaction closed between %s and %s', str(member_1), str(member_2))
         await update_trade(ctx, transaction, closed=True)
         await ctx.send(f"Trade between {member_1.display_name} and {member_2.display_name} has been closed.")
     else:
@@ -521,6 +547,7 @@ async def discard(ctx:Context, card:Union[int, str]=None, amount:Union[int, str]
     transaction = db.transactions.get_active_transaction(ctx.author.id, ctx.guild.id)
     if not transaction:
         transaction = db.transactions.open_transaction(ctx.author.id, 0, ctx.guild.id)
+        util.log.info('[Trade] Transaction opened between %s and DisCard', str(ctx.author))
         await update_trade(ctx, transaction)
     elif not transaction.is_party(0):
         raise util.CleanException("You already have an active trade open. Please finish or cancel it before starting another one.")
@@ -535,7 +562,6 @@ async def discard(ctx:Context, card:Union[int, str]=None, amount:Union[int, str]
 
 async def discard_accept(ctx:Context, transaction:db.Transaction):
     offer = util.calculate_discard_offer(transaction.card_set(1))
-    if not offer: return
 
     cards = []
     for rarity, count in offer.items():
@@ -543,38 +569,38 @@ async def discard_accept(ctx:Context, transaction:db.Transaction):
             definition = db.spawner.get_random_definition(rarity=rarity) # Ignore pools
             card = db.spawner.create_card_instance(definition, 0, 0, ctx.guild.id, owner_id='0')
             cards.append(str(card.id))
-    transaction.cards_2 = ';'.join(cards)
+    transaction.cards_2 = ';'.join(cards) or None
     transaction.accepted_2 = True
+    util.log.info('[Trade] Discard Transaction completed. Offer: %s', str({r.name: c for r, c in offer.items()}))
 
 
 # --- Event Schedulers --- #
 
-async def card_spawn_timer():
-    await client.wait_until_ready()
-    while not client.is_closed():
+class CardIntervalSpawnTask(util.TaskLooper):
+    def delay(self):
         variation = cfg.config['SPAWN_INTERVAL_VARIATION']
-        delay = cfg.config['SPAWN_INTERVAL'] * (1 - (random.random() * variation*2 - variation))
+        delay = cfg.config['SPAWN_INTERVAL'] * (1 - (random.random() * variation * 2 - variation))
 
         now = pendulum.now('US/Eastern')
         time = now.add(seconds=delay)
         start, end = cfg.config['SPAWN_INTERVAL_START_TIME'], cfg.config['SPAWN_INTERVAL_END_TIME']
-        if not start <= time.hour <= end:
+        if not start <= time.hour < end:
             time = time.set(hour=start, minute=0, second=0, microsecond=0)
             if not time > now:
                 time = time.add(days=1)
             delay += (time - now).total_seconds()
 
-        await asyncio.sleep(delay)
+        return delay
 
-        for guild in client.guilds:
-            if guild.id in cfg.config['ENABLED_GUILDS']:
-                channel_id = random.choice(list(cfg.config['SPAWN_INTERVAL_CHANNELS'][guild.id]))
-                await spawn(guild.get_channel(channel_id))
-        await asyncio.sleep(60)
+    async def run(self, guild:d.Guild):
+        channel_id = random.choice(list(cfg.config['SPAWN_INTERVAL_CHANNELS'][guild.id]))
+        await spawn(guild.get_channel(channel_id))
 
-async def card_event_timer(event_type=None):
-    await client.wait_until_ready()
-    while not client.is_closed():
+class CardEventGameTask(util.TaskLooper):
+    def __init__(self, event_type=None):
+        self.event_type = event_type
+
+    def delay(self):
         now = pendulum.now('US/Eastern')
 
         start, end = cfg.config['SPAWN_INTERVAL_START_TIME'], cfg.config['SPAWN_INTERVAL_END_TIME']
@@ -584,14 +610,14 @@ async def card_event_timer(event_type=None):
         sec_range = (end - start) * 60*60
         time = time.add(seconds=random.randrange(0, sec_range))
 
-        delay = (time - now).total_seconds()
-        await asyncio.sleep(delay)
+        return (time - now).total_seconds()
 
-        for guild in client.guilds:
-            if guild.id in cfg.config['ENABLED_GUILDS']:
-                channel_id = random.choice(list(cfg.config['SPAWN_EVENT_GAME_CHANNELS'][guild.id]))
-                await spawn_event(guild.get_channel(channel_id), event_type)
-        await asyncio.sleep(60)
+    async def run(self, guild:d.Guild):
+        channel_id = random.choice(list(cfg.config['SPAWN_EVENT_GAME_CHANNELS'][guild.id]))
+        await spawn_event(guild.get_channel(channel_id), self.event_type)
+
+    def __str__(self):
+        return super().__str__() + '[type=' + str(self.event_type) + ']'
 
 
 # --- Main --- #
