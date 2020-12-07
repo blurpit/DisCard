@@ -219,6 +219,11 @@ class Hangman(Event):
             if len(guess) > 1:
                 await super().on_guess(ctx, guess)
             elif len(guess) == 1 and guess in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' and guess not in self.content['guessed']:
+                # Ignore Chris' bulls***
+                if ctx.author.id == 339050803446677517 and guess in 'BIGCHUNGUS':
+                    await ctx.message.add_reaction('<:bigchungus:692547381832712192>')
+                    return
+
                 if guess in self.content['answer']:
                     await self.on_correct(ctx, guess, 0)
                 else:
