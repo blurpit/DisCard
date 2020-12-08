@@ -19,6 +19,7 @@ class CardDefinition(Model):
     rarity = Column(Enum(cfg.Rarity, create_constraint=False), nullable=False)
     set = Column(Enum(cfg.Set, create_constraint=False), nullable=False)
     expansion = Column(Enum(cfg.Expansion, create_constraint=False), nullable=False)
+    event_category = Column(Enum(cfg.EventCategory, create_constraint=False))
     image_id = Column(Integer, nullable=True)
     description = Column(Text, nullable=False)
 

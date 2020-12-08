@@ -248,19 +248,19 @@ async def disable(ctx:Context, channel:d.TextChannel, option:str, *sub_opts:str)
 
 @client.command()
 @admin_command()
-async def enable_event_set(ctx:Context, set_name:str):
-    util.log.warning('[Admin] Enable event card set: %s', set_name)
-    s = cfg.Set[set_name.upper()]
-    cfg.config['ENABLED_EVENT_CARD_SETS'].add(s)
-    await ctx.send('Enabled event card spawning for **{} Set**.'.format(s.text))
+async def enable_event_category(ctx:Context, category:str):
+    util.log.warning('[Admin] Enable event card category: %s', category)
+    cat = cfg.EventCategory[category.upper()]
+    cfg.config['ENABLED_EVENT_CARD_CATEGORIES'].add(cat)
+    await ctx.send('Enabled event card spawning for **{}**.'.format(cat))
 
 @client.command()
 @admin_command()
-async def disable_event_set(ctx:Context, set_name:str):
-    util.log.warning('[Admin] Disable event card set: %s', set_name)
-    s = cfg.Set[set_name.upper()]
-    cfg.config['ENABLED_EVENT_CARD_SETS'].discard(s)
-    await ctx.send('Disabled event card spawning for **{} Set**.'.format(s.text))
+async def disable_event_category(ctx:Context, category:str):
+    util.log.warning('[Admin] Disable event card category: %s', category)
+    cat = cfg.EventCategory[category.upper()]
+    cfg.config['ENABLED_EVENT_CARD_CATEGORIES'].discard(cat)
+    await ctx.send('Disabled event card spawning for **{}**.'.format(cat))
 
 @client.command()
 @admin_command()
@@ -571,7 +571,7 @@ async def discard_accept(ctx:Context, transaction:db.Transaction):
             cards.append(str(card.id))
     transaction.cards_2 = ';'.join(cards) or None
     transaction.accepted_2 = True
-    util.log.info('[Trade] Discard Transaction completed. Offer: %s', str({r.name: c for r, c in offer.items()}))
+    util.log.info('[Trade] Discard Transaction completed. Offer: %s', str(offer))
 
 
 # --- Event Schedulers --- #

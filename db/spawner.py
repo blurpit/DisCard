@@ -1,14 +1,14 @@
 import datetime as dt
 import random
 
-from sqlalchemy import func, or_
+from sqlalchemy import or_
 
 from . import *
 
 
 def get_definition(guild_id, card=None):
     if card is None:
-        if cfg.config['ENABLED_EVENT_CARD_SETS'] and random.random() < cfg.config['SPAWN_EVENT_CARD_RATE']:
+        if cfg.config['ENABLED_EVENT_CARD_CATEGORIES'] and random.random() < cfg.config['EVENT_CARD_SPAWN_RATE']:
             return get_random_definition(rarity=cfg.Rarity.EVENT)
 
         pools = {r: {} for r in cfg.Rarity}
@@ -47,7 +47,7 @@ def get_random_definition(card_set=None, rarity=None):
     if rarity is not None:
         q = q.filter_by(rarity=rarity)
     return q.filter(or_(CardDefinition.rarity != cfg.Rarity.EVENT,
-                        CardDefinition.set.in_(cfg.config['ENABLED_EVENT_CARD_SETS']))) \
+                        CardDefinition.event_category.in_(cfg.config['ENABLED_EVENT_CARD_CATEGORIES']))) \
         .order_by(func.random()) \
         .first()
 

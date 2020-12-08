@@ -7,7 +7,7 @@ import db
 
 client = d.Client()
 DUMP_CHANNEL = 767822158294286387
-DUMP_START = 244
+DUMP_START = 344
 DUMP_LIMIT = None
 DUMP_DELAY = 2.0
 
