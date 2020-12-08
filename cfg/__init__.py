@@ -58,7 +58,7 @@ config = dict(
     SPAWN_MESSAGE_MAX_CONSECUTIVE = 5, # Maximum number of consecutive messages by the same user before cards no longer spawn
 
     EVENT_CARD_SPAWN_RATE = 1/5, # Chance to spawn an Event rarity card instead of regular cards
-    ENABLED_EVENT_CARD_CATEGORIES = {EventCategory.NEWYEAR}, # Which categories should spawn Event cards
+    ENABLED_EVENT_CARD_CATEGORIES = set(), # Which categories should spawn Event cards
 
     REMOVE_IMAGE_AFTER_CLAIM = True,
     ITEMS_PER_PAGE = 15, # Number of items that appear before wrapping to the next page
