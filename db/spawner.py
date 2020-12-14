@@ -11,7 +11,6 @@ def get_definition(guild_id, card=None):
         if cfg.config['ENABLED_EVENT_CARD_CATEGORIES'] and random.random() < cfg.config['EVENT_CARD_SPAWN_RATE']:
             return get_random_definition(rarity=cfg.Rarity.EVENT)
 
-        pools = {r: {} for r in cfg.Rarity}
         used = dict(session.query(Card.card_id, func.count()) \
             .select_from(Card).join(CardDefinition) \
             .filter(CardDefinition.rarity != cfg.Rarity.EVENT) \
@@ -23,12 +22,15 @@ def get_definition(guild_id, card=None):
             .all())
         definitions = session.query(CardDefinition).all()
 
+        pools = {}
         for definition in definitions:
             rarity = definition.rarity
             pool = rarity.pool
             if used.get(definition.id, 0) > 0:
                 pool = max(0, pool - used[definition.id])
             if pool > 0:
+                if rarity not in pools:
+                    pools[rarity] = {}
                 pools[rarity][definition.id] = (pool, definition)
 
         if any(any(pools[r][card][0] > 0 for card in pools[r]) for r in pools):
