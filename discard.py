@@ -45,7 +45,7 @@ def trade_channels():
 
 # --- Utility Functions --- #
 
-async def page_turn(message, reaction, func):
+async def page_turn(message, reaction, func, *args, **kwargs):
     page_text = message.embeds[0].footer.text.split('|')[0].strip()[5:] # "Page x/y | blah" -> "x/y"
     current, max_page = map(lambda n: int(n)-1, page_text.split('/'))
 
@@ -57,7 +57,7 @@ async def page_turn(message, reaction, func):
     if page == current: return
 
     user = message.mentions[0] if message.mentions else None
-    await func(message, user, page, max_page)
+    await func(message, user, page, max_page, *args, **kwargs)
 
 async def add_page_reactions(message, max_page):
     if max_page > 0:
@@ -124,7 +124,8 @@ async def on_reaction_add(reaction:d.Reaction, user:d.Member):
         title = reaction.message.embeds[0].title
         if reaction.emoji in cfg.page_controls.values():
             if 'Card Collection' in title:
-                await page_turn(reaction.message, reaction.emoji, inventory_page_turn)
+                await page_turn(reaction.message, reaction.emoji, inventory_page_turn,
+                                dupes_only='(Duplicates Only)' in title)
             elif 'CardDex' in title:
                 await page_turn(reaction.message, reaction.emoji, cardex_page_turn)
             elif 'Leaderboard' in title:
@@ -334,13 +335,14 @@ async def answer(ctx:Context, *, guess:str=None):
 
 @client.command(aliases=['inv'])
 @command_channel()
-async def inventory(ctx:Context):
-    inv = db.Inventory(ctx.author.id, ctx.guild.id)
+async def inventory(ctx:Context, dupes_only:str=''):
+    dupes_only = dupes_only.lower() in ('dupe', 'dupes', 'duplicate', 'duplicates')
+    inv = db.Inventory(ctx.author.id, ctx.guild.id, dupes_only)
     msg = await ctx.send(content=ctx.author.mention, embed=inv.get_embed(ctx.author.display_name, 0))
     await add_page_reactions(msg, inv.max_page)
 
-async def inventory_page_turn(message, user, page, max_page):
-    inv = db.Inventory(user.id, message.guild.id)
+async def inventory_page_turn(message, user, page, max_page, dupes_only=False):
+    inv = db.Inventory(user.id, message.guild.id, dupes_only)
     await message.edit(content=user.mention, embed=inv.get_embed(user.display_name, page))
 
 @client.command(aliases=['show', 'preview'])

@@ -237,15 +237,17 @@ class Transaction(Model):
                "{0.accepted_1}, {0.accepted_2} {0.message_id})".format(self)
 
 class Inventory:
-    def __init__(self, user_id, guild_id):
+    def __init__(self, user_id, guild_id, dupes_only=False):
         self.user_id = user_id
+        self.dupes_only = dupes_only
         self.inv = {}
         self.cards = session.query(Card) \
             .filter_by(guild_id=guild_id) \
             .filter(Card.owner_ids.endswith(str(user_id))) \
             .all()
         self.inv = util.card_count_map(self.cards)
-        self.max_page = util.max_page(len(self.inv))
+        self.max_page = util.max_page(len(self.inv)) if not self.dupes_only \
+            else util.max_page(sum(True for item in self.inv.values() if item[0] > 1))
 
     def __getitem__(self, item) -> Card:
         if isinstance(item, int):
@@ -279,6 +281,11 @@ class Inventory:
         else:
             return next((count for count, definition in self.inv.values() if definition.name.lower() == card.lower()), 0)
 
+    def _duplicates_only_inv(self):
+        for item in self.inv.values():
+            if item[0] > 1:
+                yield item
+
     def get_embed(self, name, page):
         page = util.clamp(page, 0, self.max_page)
 
@@ -286,15 +293,18 @@ class Inventory:
         embed.set_author(name=cfg.config['EMBED_AUTHOR'])
         embed.set_footer(text=f'Page {page+1}/{self.max_page + 1}')
         embed.title = f"{name}'s Card Collection"
+        if self.dupes_only: embed.title += ' | (Duplicates Only)'
 
         num_items = cfg.config['ITEMS_PER_PAGE']
         items = sorted(
-            self.inv.values(),
+            self.inv.values() if not self.dupes_only else self._duplicates_only_inv(),
             key=lambda val: (val[1].set.order, val[1].rarity.order, val[1].id)
         )[num_items*page : num_items*(page+1)]
 
         if items:
-            embed.description = f'You own {len(self)} cards! ({len(self.inv)} unique)\n'
+            if not self.dupes_only: embed.description = f'You own {len(self)} cards! ({len(self.inv)} unique)\n'
+            else: embed.description = f'You own {len(self)} cards! ({len(items)} with multiple copies)'
+
             embed.description += '\n**' + items[0][1].set.text + ' Set**'
             for i in range(len(items)):
                 count, definition = items[i]
@@ -302,7 +312,8 @@ class Inventory:
                 if i+1 < len(items) and definition.set != items[i+1][1].set:
                     embed.description += '\n\n**' + items[i+1][1].set.text + ' Set**'
         else:
-            embed.description = "There's nothing in your inventory. Use **$claim** to claim a card next time you see one!"
+            if not self.dupes_only: embed.description = "There's nothing in your inventory. Use **$claim** to claim a card next time you see one!"
+            else: embed.description = "You don't have any duplicate cards in your inventory."
 
         embed.url = cfg.config['HELP_URL']
         embed.colour = d.Color.blue()
