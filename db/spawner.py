@@ -6,7 +6,7 @@ from sqlalchemy import or_
 from . import *
 
 
-def get_definition(guild_id, card=None):
+def get_definition(guild_id, card=None, rarity=None):
     if card is None:
         if cfg.config['ENABLED_EVENT_CARD_CATEGORIES'] and random.random() < cfg.config['EVENT_CARD_SPAWN_RATE']:
             return get_random_definition(rarity=cfg.Rarity.EVENT)
@@ -24,18 +24,19 @@ def get_definition(guild_id, card=None):
 
         pools = {}
         for definition in definitions:
-            rarity = definition.rarity
-            pool = rarity.pool
+            r = definition.rarity
+            pool = r.pool
             if used.get(definition.id, 0) > 0:
                 pool = max(0, pool - used[definition.id])
             if pool > 0:
-                if rarity not in pools:
-                    pools[rarity] = {}
-                pools[rarity][definition.id] = (pool, definition)
+                if r not in pools:
+                    pools[r] = {}
+                pools[r][definition.id] = (pool, definition)
 
         if pools:
-            r = random.choices(list(pools.keys()), weights=[r.chance for r in pools])[0]
-            return random.choice(list(pools[r].values()))[1]
+            r = rarity or random.choices(list(pools.keys()), weights=[r.chance for r in pools])[0]
+            if r in pools:
+                return random.choice(list(pools[r].values()))[1]
     else:
         if isinstance(card, int):
             return session.query(CardDefinition).filter_by(id=card).one_or_none()

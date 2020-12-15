@@ -299,6 +299,28 @@ async def testview(ctx:Context, card:Union[int, str]):
     card = db.spawner.get_definition(ctx.guild.id, card)
     await ctx.send(embed=card.get_embed(preview=True))
 
+@client.command()
+@admin_command()
+async def gift(ctx:Context, user:Union[d.Member, str], rarity:str):
+    rarity = cfg.Rarity[rarity.upper()]
+    if user == 'everyone' or user == 'all':
+        response = f":partying_face: Hey hey! Everyone has been generously gifted 1 x Random **{rarity.text}**! ヽ(^o^)ノ"
+    elif isinstance(user, d.Member):
+        response = f":partying_face: Hey {user.mention}, you have been generously gifted 1 x Random **{rarity.text}**! ヽ(^o^)ノ"
+    else:
+        return
+
+    for user in ctx.guild.members if user == 'everyone' or user == 'all' else (user,):
+        if not user.bot:
+            definition = db.spawner.get_definition(ctx.guild.id, rarity=rarity)
+            if definition:
+                db.spawner.create_card_instance(definition, 0, 0, ctx.guild.id, user.id)
+                response += f'\n\t• **{user.display_name}**: You got [#{definition.id}] **{definition.name}** *{definition.set.text}*'
+            else:
+                response += '\nUnfortunately, the pool ran out before everyone could get their card. Sorry :pensive:'
+                break
+    await ctx.send(response)
+
 
 # --- Card Claiming --- #
 
