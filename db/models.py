@@ -177,8 +177,19 @@ class Transaction(Model):
     @staticmethod
     def _get_offer_field_text(card_map):
         if not card_map: return "No cards have been added."
-        return '\n'.join('• ' + definition.string(count=count)
-                         for count, definition in sorted(card_map.values(), key=lambda x: x[1].id))
+        result = '• '
+        added = 0
+        for count, definition in sorted(card_map.values(), key=lambda x: (x[1].rarity.order, x[1].id)):
+            line = definition.string(count=count, set=False)
+            if added > 0: line = '\n• ' + line
+            if len(result + line) > 1000:
+                remaining = sum(x[0] for x in card_map.values()) - added
+                result += f'\n• ... {remaining} more card(s)'
+                break
+            else:
+                result += line
+                added += count
+        return result
 
     @staticmethod
     def _get_discard_offer_field_text(offer):
@@ -199,6 +210,8 @@ class Transaction(Model):
                 embed.description = "__**How to Trade:**__\n" \
                     "• Offer one or more of your cards using **$trade [Card ID] [Amount]**.\n" \
                     "• Remove one or more cards you offered with **$untrade [Card ID] [Amount]**.\n" \
+                    "• Offer all of your duplicate cards using **$trade duplicates**.\n" \
+                    "• Remove all offered cards using **$untrade all**\n" \
                     "• When the exchange looks good, accept it using **$accept**.\n" \
                     "• Call **$cancel** to call the exchange off.\n" \
                     "Be sure to check your inventory! **$inventory** is disabled here to reduce clutter, but you can use it in #ccc-commands.\n"
@@ -206,6 +219,8 @@ class Transaction(Model):
                 embed.description = "__**How to Trade:**__\n" \
                     "• Offer one or more of your cards using **$trade [Card ID] [Amount]**.\n" \
                     "• Remove a card you offered with **$untrade [Card ID] [Amount]**.\n" \
+                    "• Offer all of your duplicate cards using **$trade duplicates**.\n" \
+                    "• Remove all offered cards using **$untrade all**\n" \
                     "• When the trade looks good, accept it using **$accept**. Once a trade is accepted, cards can no longer be added or removed.\n" \
                     "• If you change your mind, use **$unaccept** and you'll be able to change your offer.\n" \
                     "• If the trade is a total bust, call **$cancel** to call the whole thing off.\n" \

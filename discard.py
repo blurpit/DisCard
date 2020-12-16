@@ -472,7 +472,10 @@ async def trade_add(ctx:Context, transaction:db.Transaction, card:Union[int, str
     if transaction.locked: return
 
     added_cards = transaction.card_set(transaction.get_user(ctx.author.id))
-    cards = db.query_from_inventory(ctx.author.id, ctx.guild.id, card, amount, exclude=added_cards)
+    if card in ('dupe', 'dupes', 'duplicate', 'duplicates'):
+        cards = db.query_all_duplicates_from_inventory(ctx.author.id, ctx.guild.id, exclude=added_cards)
+    else:
+        cards = db.query_from_inventory(ctx.author.id, ctx.guild.id, card, amount, exclude=added_cards)
     if cards:
         # Cannot add member/event cards to Discard trade
         if transaction.is_party(0):

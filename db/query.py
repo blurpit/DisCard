@@ -1,5 +1,7 @@
 from operator import or_
 
+from sqlalchemy import and_
+
 from . import session
 from .models import *
 
@@ -13,6 +15,23 @@ def query_from_inventory(user_id, guild_id, card, amount, exclude=()):
         .filter(Card.id.notin_(exclude)) \
         .order_by(Card.claim_timestamp.desc()) \
         .limit(amount if amount != 'all' else None) \
+        .all()
+
+def query_all_duplicates_from_inventory(user_id, guild_id, exclude=()):
+    subq = session.query(Card.card_id, Card.owner_ids, Card.guild_id, func.max(Card.claim_timestamp).label('latest_claim')) \
+        .select_from(Card).join(CardDefinition) \
+        .filter(and_(CardDefinition.rarity != cfg.Rarity.MEMBER, CardDefinition.rarity != cfg.Rarity.EVENT)) \
+        .filter(Card.guild_id == guild_id) \
+        .filter(Card.owner_ids.endswith(str(user_id))) \
+        .filter(Card.id.notin_(exclude)) \
+        .group_by(Card.card_id) \
+        .having(func.count() > 1) \
+        .subquery()
+    return session.query(Card) \
+        .join(subq, and_(Card.card_id == subq.c.card_id,
+                         Card.owner_ids == subq.c.owner_ids,
+                         Card.guild_id == subq.c.guild_id,
+                         Card.claim_timestamp != subq.c.latest_claim)) \
         .all()
 
 def query_cards(card_ids, card_filter=None):
