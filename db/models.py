@@ -164,6 +164,11 @@ class Transaction(Model):
             card_set.discard(card.id)
         setattr(self, 'cards_' + str(user), ';'.join(map(str, card_set)) or None)
 
+    def remove_all(self, user:int):
+        user = self.get_user(user)
+        if user == 1: self.cards_1 = None
+        elif user == 1: self.cards_2 = None
+
     def set_accepted(self, user:int, accepted:bool):
         user = self.get_user(user)
         setattr(self, 'accepted_' + str(user), accepted)

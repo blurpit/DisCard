@@ -512,6 +512,12 @@ async def untrade(ctx:Context, card:Union[int, str], amount:Union[int, str]=1):
     if not transaction: raise util.NoActiveTrade()
     if transaction.locked: return
 
+    if card == 'all' and transaction.card_set(ctx.author.id):
+        transaction.remove_all(ctx.author.id)
+        db.session.commit()
+        await update_trade(ctx, transaction)
+        return
+
     cards = db.query_cards(transaction.card_set(ctx.author.id), card_filter=card)[:amount if amount != 'all' else None]
     if cards:
         transaction.remove_cards(ctx.author.id, cards)
