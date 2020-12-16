@@ -474,9 +474,13 @@ async def trade_add(ctx:Context, transaction:db.Transaction, card:Union[int, str
     added_cards = transaction.card_set(transaction.get_user(ctx.author.id))
     cards = db.query_from_inventory(ctx.author.id, ctx.guild.id, card, amount, exclude=added_cards)
     if cards:
-        # Cannot add member cards to Discard trade
-        if transaction.is_party(0) and any(c.definition.rarity == cfg.Rarity.MEMBER for c in cards):
-            raise util.CleanException("Sorry, Member cards are not exchangeable.")
+        # Cannot add member/event cards to Discard trade
+        if transaction.is_party(0):
+            for c in cards:
+                if c.definition.rarity == cfg.Rarity.MEMBER:
+                    raise util.CleanException('Sorry, Member cards are not exchangeable.')
+                elif c.definition.rarity == cfg.Rarity.EVENT:
+                    raise util.CleanException('Sorry, Event cards are not exchangeable.')
 
         transaction.add_cards(ctx.author.id, cards)
         db.session.commit()
