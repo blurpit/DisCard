@@ -590,7 +590,10 @@ async def discard_accept(ctx:Context, transaction:db.Transaction):
     cards = []
     for rarity, count in offer.items():
         for i in range(count):
-            definition = db.spawner.get_random_definition(rarity=rarity) # Ignore pools
+            if rarity == cfg.Rarity.EPIC:
+                definition = db.spawner.get_random_definition_unique(ctx.guild.id, ctx.author.id, rarity=rarity)
+            else:
+                definition = db.spawner.get_random_definition(rarity=rarity)
             card = db.spawner.create_card_instance(definition, 0, 0, ctx.guild.id, owner_id='0')
             cards.append(str(card.id))
     transaction.cards_2 = ';'.join(cards) or None

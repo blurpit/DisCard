@@ -1,5 +1,6 @@
 import datetime as dt
 import random
+from itertools import chain
 
 from sqlalchemy import or_
 
@@ -49,10 +50,29 @@ def get_random_definition(card_set=None, rarity=None):
         q = q.filter_by(set=card_set)
     if rarity is not None:
         q = q.filter_by(rarity=rarity)
-    return q.filter(or_(CardDefinition.rarity != cfg.Rarity.EVENT,
-                        CardDefinition.event_category.in_(cfg.config['ENABLED_EVENT_CARD_CATEGORIES']))) \
+    if rarity is None or rarity == cfg.Rarity.EVENT:
+        q = q.filter(or_(CardDefinition.rarity != cfg.Rarity.EVENT,
+                         CardDefinition.event_category.in_(cfg.config['ENABLED_EVENT_CARD_CATEGORIES'])))
+    return q.order_by(func.random()).first()
+
+def get_random_definition_unique(guild_id, user_id, card_set=None, rarity=None):
+    inventory = session.query(Card.card_id) \
+        .filter(Card.guild_id == guild_id) \
+        .filter(Card.owner_ids.endswith(user_id)) \
+        .group_by(Card.card_id)
+    inventory = list(chain(*inventory.all()))
+
+    q = session.query(CardDefinition)
+    if card_set is not None:
+        q = q.filter(CardDefinition.set == card_set)
+    if rarity is not None:
+        q = q.filter(CardDefinition.rarity == rarity)
+    if rarity is None or rarity == cfg.Rarity.EVENT:
+        q = q.filter(or_(CardDefinition.rarity != cfg.Rarity.EVENT,
+                         CardDefinition.event_category.in_(cfg.config['ENABLED_EVENT_CARD_CATEGORIES'])))
+    return q.filter(CardDefinition.id.notin_(inventory)) \
         .order_by(func.random()) \
-        .first()
+        .first() or get_random_definition(card_set=card_set, rarity=rarity)
 
 def create_card_instance(definition, message_id, channel_id, guild_id, owner_id=None):
     card = Card(
