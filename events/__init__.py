@@ -312,7 +312,7 @@ event_map = {
 
 def create(cls=None) -> Event:
     if cls is None:
-        cls = random.choice([Question, Trivia])
+        cls = Trivia # random.choice([Question, Trivia])
     else:
         cls = event_map[cls.lower()]
     return cls()
