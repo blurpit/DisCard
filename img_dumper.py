@@ -1,14 +1,14 @@
 import asyncio
-import datetime as dt
+# import datetime as dt
 
 import discord as d
 
+import cfg
 import db
 
 client = d.Client()
 DUMP_CHANNEL = 767822158294286387
-DUMP_START = 344
-DUMP_LIMIT = None
+DUMP_EXPANSION = cfg.Expansion.EX3
 DUMP_DELAY = 2.0
 
 @client.event
@@ -17,9 +17,8 @@ async def on_ready():
 
     channel:d.TextChannel = client.get_channel(DUMP_CHANNEL)
     definitions = db.session.query(db.CardDefinition) \
+        .filter(db.CardDefinition.expansion == DUMP_EXPANSION) \
         .order_by(db.CardDefinition.id) \
-        .limit(DUMP_LIMIT) \
-        .offset(DUMP_START - 1) \
         .all()
 
     for definition in definitions:
