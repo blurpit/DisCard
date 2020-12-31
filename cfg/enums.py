@@ -6,7 +6,7 @@ class Rarity(Enum):
     RARE   = ('Rare',   3, 0.18, 5,  0.75, 15, 0xffd900)
     EPIC   = ('Epic',   1, 0.05, 15, 0.25, 5,  0xba24ff)
     MEMBER = ('Member', 0, 0.02, 25, 0,    1,  0xff2b24)
-    EVENT  = ('Event',  2, 0,    15, 0,    0,  0x00e8f0)
+    EVENT  = ('Event',  2, 0,    4,  0,    0,  0x00e8f0)
 
     def __init__(self, text, order, chance, weight, event_chance, pool, color):
         self.text = text
@@ -23,6 +23,7 @@ class Expansion(Enum):
     BASE = 'Base'
     EX1  = 'Crucial Cards Collection'
     EX2  = 'Christmas Combat Crisis'
+    EX3  = 'Media Mashup Madness'
 
     def __init__(self, text):
         self.text = text
@@ -42,6 +43,9 @@ class Set(Enum):
     GRADY     = ('Grady',             9,  775857721744031764, '<:GRADY:775861580977537074>')
     WINTER    = ('Winter Holiday',    10, 785737702955024444, '<:WINTER:784888230386204682>')
     POKEMON   = ('Pokémon',           11, 785737698606055435, '<:POKEMON:784888230645334098>')
+    MINECRAFT = ('Minecraft',         12, 794047026614239232, '<:MINECRAFT:789961023183388682>')
+    BRITISH   = ('British',           13, 794047032293064725, '<:BRITISH:789961022827790337>')
+    YOUTUBER  = ('YouTubers',         14, 794047878372786196, '<:YOUTUBER:789961022927536168>')
 
     def __init__(self, text, order, image_id, badge):
         self.text = text

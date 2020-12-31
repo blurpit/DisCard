@@ -59,8 +59,8 @@ config = dict(
 
     EVENT_CARD_SPAWN_RATE = 1/5, # Chance to spawn an Event rarity card instead of regular cards
     ENABLED_EVENT_CARD_CATEGORIES = set(), # Which categories should spawn Event cards
-    HANGMAN_CHUNGUS_USER = 339050803446677517, # Chungus easter egg for hangman (Chris)
-    HANGMAN_CHUNGUS_LETTERS = 'BIGCHUNGUS', # Letters to use in chungus easter egg for hangman
+    HANGMAN_CHUNGUS_USER = None, # Chungus easter egg for hangman
+    HANGMAN_CHUNGUS_LETTERS = 'CHUNGUS', # Letters to use in chungus easter egg for hangman
 
     REMOVE_IMAGE_AFTER_CLAIM = True,
     ITEMS_PER_PAGE = 15, # Number of items that appear before wrapping to the next page
