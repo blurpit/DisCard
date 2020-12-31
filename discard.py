@@ -302,6 +302,7 @@ async def testview(ctx:Context, card:Union[int, str]):
 @client.command()
 @admin_command()
 async def gift(ctx:Context, user:Union[d.Member, str], rarity:str):
+    util.log.warning('[Admin] Gift for %s of rarity %s', user, rarity)
     rarity = cfg.Rarity[rarity.upper()]
     if user == 'everyone' or user == 'all':
         response = f":partying_face: Hey hey! Everyone has been generously gifted 1 x Random **{rarity.text}**! ヽ(^o^)ノ"
@@ -315,6 +316,7 @@ async def gift(ctx:Context, user:Union[d.Member, str], rarity:str):
             definition = db.spawner.get_definition(ctx.guild.id, rarity=rarity)
             if definition:
                 db.spawner.create_card_instance(definition, 0, 0, ctx.guild.id, user.id)
+                util.log.debug('Gifted to %s: [#%d] %s', user, definition.id, definition.name)
                 response += f'\n\t• **{user.display_name}**: You got [#{definition.id}] **{definition.name}** *{definition.set.text}*'
             else:
                 response += '\nUnfortunately, the pool ran out before everyone could get their card. Sorry :pensive:'
@@ -324,7 +326,10 @@ async def gift(ctx:Context, user:Union[d.Member, str], rarity:str):
 @client.command()
 @admin_command()
 async def redistribute_member_cards(ctx:Context):
+    util.log.warning('[Admin] Redistributing member cards into pool, replacing with Epic.')
     cards = db.query_all_of_rarity(cfg.Rarity.MEMBER, ctx.guild.id)
+    util.log.debug('Queried %d member cards', len(cards))
+
     response = ':champagne: :two: :zero: :two: :one: :partying_face: Happy new year! All **Member** cards have been added back to ' \
                'the pool and exchanged for 1 x Random **Epic**.'
 
@@ -338,6 +343,8 @@ async def redistribute_member_cards(ctx:Context):
         if owner is None: owner = '(unknown)'
         else: owner = owner.display_name
 
+        util.log.debug('Exchanged [#%d] %s belonging to %s for [#%d] %s (%s)',
+                       card.definition.id, card.definition.name, owner, epic.id, epic.name, epic.set.text)
         response += f"\n\t• {owner}'s [#{card.definition.id}] **{card.definition.name}** exchanged for [#{epic.id}] **{epic.name}**"
 
     await ctx.send(response)
