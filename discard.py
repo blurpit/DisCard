@@ -321,6 +321,27 @@ async def gift(ctx:Context, user:Union[d.Member, str], rarity:str):
                 break
     await ctx.send(response)
 
+@client.command()
+@admin_command()
+async def redistribute_member_cards(ctx:Context):
+    cards = db.query_all_of_rarity(cfg.Rarity.MEMBER, ctx.guild.id)
+    response = ':champagne: :two: :zero: :two: :one: :partying_face: Happy new year! All **Member** cards have been added back to ' \
+               'the pool and exchanged for 1 x Random **Epic**.'
+
+    for card in cards:
+        owner_id = card.owner_id
+        card.owner_id = 0
+        epic = db.spawner.get_random_definition(rarity=cfg.Rarity.EPIC)
+        db.spawner.create_card_instance(epic, 0, 0, ctx.guild.id, owner_id=owner_id)
+
+        owner = ctx.guild.get_member(owner_id)
+        if owner is None: owner = '(unknown)'
+        else: owner = owner.display_name
+
+        response += f"\n\t• {owner}'s [#{card.definition.id}] **{card.definition.name}** exchanged for [#{epic.id}] **{epic.name}**"
+
+    await ctx.send(response)
+
 
 # --- Card Claiming --- #
 

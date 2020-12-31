@@ -75,3 +75,12 @@ def query_card_ownership(user_id, guild_id, card):
         .count() \
         if definition else 0
     return definition, count
+
+def query_all_of_rarity(rarity, guild_id):
+    """ Query all cards of a certain rarity """
+    return session.query(Card) \
+        .select_from(Card).join(CardDefinition) \
+        .filter(CardDefinition.rarity == rarity) \
+        .filter(Card.guild_id == guild_id) \
+        .order_by(Card.card_id) \
+        .all()
